@@ -1,0 +1,43 @@
+import type { DiagramColors } from "./types";
+
+export const THEMES: Record<string, DiagramColors> = {
+	"zinc-dark": { bg: "#18181B", fg: "#FAFAFA" },
+	"zinc-light": { bg: "#FAFAFA", fg: "#18181B" },
+	"tokyo-night": { bg: "#1a1b26", fg: "#a9b1d6", line: "#3d59a1", accent: "#7aa2f7" },
+	"catppuccin-mocha": { bg: "#1e1e2e", fg: "#cdd6f4", accent: "#cba6f7", line: "#585b70" },
+	"catppuccin-latte": { bg: "#eff1f5", fg: "#4c4f69", accent: "#8839ef", line: "#9ca0b0" },
+	nord: { bg: "#2e3440", fg: "#d8dee9", accent: "#88c0d0", line: "#4c566a" },
+	dracula: { bg: "#282a36", fg: "#f8f8f2", accent: "#bd93f9", line: "#6272a4" },
+	"github-light": { bg: "#ffffff", fg: "#1f2328", accent: "#0969da", line: "#d1d9e0" },
+	"github-dark": { bg: "#0d1117", fg: "#e6edf3", accent: "#58a6ff", line: "#30363d" },
+	"one-dark": { bg: "#282c34", fg: "#abb2bf", accent: "#c678dd", line: "#3e4451" },
+	"solarized-dark": { bg: "#002b36", fg: "#839496", accent: "#268bd2", line: "#073642" },
+	"solarized-light": { bg: "#fdf6e3", fg: "#657b83", accent: "#268bd2", line: "#eee8d5" },
+	monokai: { bg: "#272822", fg: "#f8f8f2", accent: "#a6e22e", line: "#49483e" },
+	"gruvbox-dark": { bg: "#282828", fg: "#ebdbb2", accent: "#fabd2f", line: "#504945" },
+	"gruvbox-light": { bg: "#fbf1c7", fg: "#3c3836", accent: "#d79921", line: "#d5c4a1" },
+	"rose-pine": { bg: "#191724", fg: "#e0def4", accent: "#c4a7e7", line: "#26233a" },
+	"rose-pine-dawn": { bg: "#faf4ed", fg: "#575279", accent: "#907aa9", line: "#f2e9e1" },
+	"ayu-dark": { bg: "#0a0e14", fg: "#b3b1ad", accent: "#ffb454", line: "#11151c" },
+	"ayu-light": { bg: "#fafafa", fg: "#575f66", accent: "#ff9940", line: "#f0f0f0" },
+	vesper: { bg: "#101010", fg: "#ffffff", accent: "#ffc799", line: "#232323" },
+	"vitesse-dark": { bg: "#121212", fg: "#dbd7caee", accent: "#4d9375", line: "#282828" },
+	"vitesse-light": { bg: "#ffffff", fg: "#393a34", accent: "#1e754f", line: "#f1f1f1" },
+	kanagawa: { bg: "#1f1f28", fg: "#dcd7ba", accent: "#7e9cd8", line: "#2a2a37" },
+	"everforest-dark": { bg: "#2d353b", fg: "#d3c6aa", accent: "#a7c080", line: "#3d484d" },
+	"everforest-light": { bg: "#fdf6e3", fg: "#5c6a72", accent: "#8da101", line: "#efebd4" },
+	"material-dark": { bg: "#263238", fg: "#eeffff", accent: "#82aaff", line: "#37474f" },
+	"material-light": { bg: "#fafafa", fg: "#546e7a", accent: "#6182b8", line: "#e7e7e8" },
+	poimandres: { bg: "#1b1e28", fg: "#a6accd", accent: "#add7ff", line: "#303340" },
+	"night-owl": { bg: "#011627", fg: "#d6deeb", accent: "#82aaff", line: "#122d42" },
+	"one-hunter": {
+		bg: "#1e2127",
+		fg: "#c0c5cf",
+		accent: "#e06c75",
+		line: "#2c313a",
+		surface: "#282c34",
+		border: "#3e4451",
+	},
+};
+
+export const DEFAULTS: DiagramColors = { bg: "#ffffff", fg: "#27272a" };
