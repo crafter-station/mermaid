@@ -1,0 +1,26 @@
+{
+  "name": "@crafter/mermaid-cli",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "crafter-mermaid": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "@crafter/mermaid-parser": "workspace:*",
+    "@crafter/mermaid-layout": "workspace:*",
+    "@crafter/mermaid-themes": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test src/"
+  }
+}

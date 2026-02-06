@@ -1,0 +1,22 @@
+{
+  "name": "@crafter/mermaid-player",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "@crafter/mermaid-layout": "workspace:*",
+    "@crafter/mermaid-renderer": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test src/"
+  }
+}

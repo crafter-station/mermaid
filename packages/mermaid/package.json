@@ -1,0 +1,31 @@
+{
+  "name": "@crafter/mermaid",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/crafter-mermaid.browser.global.js"
+    }
+  },
+  "unpkg": "./dist/crafter-mermaid.browser.global.js",
+  "jsdelivr": "./dist/crafter-mermaid.browser.global.js",
+  "files": ["dist"],
+  "dependencies": {
+    "@crafter/mermaid-parser": "workspace:*",
+    "@crafter/mermaid-layout": "workspace:*",
+    "@crafter/mermaid-renderer": "workspace:*",
+    "@crafter/mermaid-themes": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test src/"
+  }
+}

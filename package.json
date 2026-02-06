@@ -1,0 +1,18 @@
+{
+  "name": "@crafter/mermaid-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter '@crafter/mermaid-parser' --filter '@crafter/mermaid-themes' build && bun run --filter '@crafter/mermaid-layout' build && bun run --filter '@crafter/mermaid-renderer' build && bun run --filter '@crafter/mermaid' --filter '@crafter/mermaid-cli' --filter '@crafter/mermaid-player' build",
+    "test": "bun run --filter '*' test",
+    "check": "biome check --write .",
+    "dev": "bun run packages/mermaid/src/dev.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.8",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  }
+}
