@@ -12,6 +12,7 @@
   },
   "files": ["dist"],
   "dependencies": {
+    "@crafter/mermaid-parser": "workspace:*",
     "@crafter/mermaid-layout": "workspace:*",
     "@crafter/mermaid-renderer": "workspace:*"
   },
