@@ -195,7 +195,62 @@ export interface ERAST {
 	span: SourceSpan;
 }
 
-export type DiagramAST = FlowchartAST | SequenceAST | ClassAST | ERAST;
+export interface PieSlice {
+	label: string;
+	value: number;
+	span: SourceSpan;
+}
+
+export interface PieAST {
+	type: "pie";
+	title?: string;
+	showData?: boolean;
+	slices: PieSlice[];
+	span: SourceSpan;
+}
+
+export interface GanttTask {
+	id?: string;
+	label: string;
+	status?: "done" | "active" | "crit" | "milestone";
+	startDate?: string;
+	afterId?: string;
+	duration?: string;
+	endDate?: string;
+	section: string;
+	span: SourceSpan;
+}
+
+export interface GanttAST {
+	type: "gantt";
+	title?: string;
+	dateFormat?: string;
+	sections: Array<{ name: string; tasks: GanttTask[] }>;
+	span: SourceSpan;
+}
+
+export interface MindmapNode {
+	id: string;
+	label: string;
+	shape: "default" | "rounded" | "circle" | "bang" | "cloud" | "hexagon";
+	children: MindmapNode[];
+	span: SourceSpan;
+}
+
+export interface MindmapAST {
+	type: "mindmap";
+	root: MindmapNode;
+	span: SourceSpan;
+}
+
+export type DiagramAST =
+	| FlowchartAST
+	| SequenceAST
+	| ClassAST
+	| ERAST
+	| PieAST
+	| GanttAST
+	| MindmapAST;
 
 export interface ParseDiagnostic {
 	severity: "error" | "warning";

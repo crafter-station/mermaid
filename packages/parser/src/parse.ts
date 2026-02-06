@@ -2,6 +2,9 @@ import { detectDiagramType } from "./detect";
 import { parseClass } from "./diagrams/class";
 import { parseER } from "./diagrams/er";
 import { parseFlowchart } from "./diagrams/flowchart";
+import { parseGantt } from "./diagrams/gantt";
+import { parseMindmap } from "./diagrams/mindmap";
+import { parsePie } from "./diagrams/pie";
 import { parseSequence } from "./diagrams/sequence";
 import { createError, createSpan } from "./errors";
 import type { DiagramAST, ParseResult } from "./types";
@@ -36,16 +39,10 @@ export function parse(source: string): ParseResult<DiagramAST> {
 		case "er":
 			return parseER(source);
 		case "pie":
+			return parsePie(source);
 		case "gantt":
+			return parseGantt(source);
 		case "mindmap":
-			return {
-				ast: null,
-				diagnostics: [
-					createError(
-						`${diagramType} diagrams not yet supported`,
-						createSpan(1, 1, 0, 0),
-					),
-				],
-			};
+			return parseMindmap(source);
 	}
 }
