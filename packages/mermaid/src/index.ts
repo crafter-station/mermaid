@@ -6,6 +6,7 @@ import type { DiagramAST, ParseResult } from "@crafter/mermaid-parser";
 import type { PositionedGraph, LayoutOptions } from "@crafter/mermaid-layout";
 import type { RenderOptions } from "@crafter/mermaid-renderer";
 import type { DiagramColors, DiagramTheme } from "@crafter/mermaid-themes";
+import { getRegistry } from "./plugins";
 
 export interface CrafterMermaidOptions extends LayoutOptions {
 	theme?: DiagramTheme;
@@ -16,19 +17,46 @@ export interface CrafterMermaidOptions extends LayoutOptions {
 
 export function render(text: string, options: CrafterMermaidOptions = {}): string {
 	const { theme, padding, transparent, debug, ...layoutOpts } = options;
+	const pluginRegistry = getRegistry();
 
-	const result = parse(text);
-	if (!result.ast) {
-		const errors = result.diagnostics.map((d) => d.message).join("\n");
-		throw new Error(`Failed to parse diagram:\n${errors}`);
+	let result: ParseResult<any> | null = null;
+	let positioned: PositionedGraph | null = null;
+
+	const firstLine = text.split(/[\n;]/)[0]?.trim() || "";
+
+	for (const [, plugin] of pluginRegistry.diagrams) {
+		if (plugin.detect(firstLine)) {
+			result = plugin.parse(text);
+			if (result?.ast) {
+				if (plugin.layout) {
+					positioned = plugin.layout(result.ast, {
+						direction: layoutOpts.direction,
+						nodeSpacing: layoutOpts.nodeSpacing,
+						layerSpacing: layoutOpts.layerSpacing,
+						padding: padding,
+					});
+				}
+				break;
+			}
+		}
 	}
 
-	const positioned = layout(result.ast, {
-		direction: layoutOpts.direction,
-		nodeSpacing: layoutOpts.nodeSpacing,
-		layerSpacing: layoutOpts.layerSpacing,
-		padding: padding,
-	});
+	if (!result) {
+		result = parse(text);
+		if (!result.ast) {
+			const errors = result.diagnostics.map((d) => d.message).join("\n");
+			throw new Error(`Failed to parse diagram:\n${errors}`);
+		}
+	}
+
+	if (!positioned) {
+		positioned = layout(result.ast, {
+			direction: layoutOpts.direction,
+			nodeSpacing: layoutOpts.nodeSpacing,
+			layerSpacing: layoutOpts.layerSpacing,
+			padding: padding,
+		});
+	}
 
 	return renderToString(positioned, { theme, padding, transparent, debug });
 }
@@ -42,6 +70,8 @@ export {
 	DEFAULTS,
 };
 
+export { use, resetRegistry, getRegistry } from "./plugins";
+
 export type {
 	DiagramAST,
 	ParseResult,
@@ -51,3 +81,10 @@ export type {
 	DiagramColors,
 	DiagramTheme,
 };
+
+export type {
+	MermaidPlugin,
+	ShapePlugin,
+	DiagramPlugin,
+	ThemePlugin,
+} from "./plugins";
