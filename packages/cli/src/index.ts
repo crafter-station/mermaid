@@ -1,1 +1,3 @@
-export const VERSION = "0.0.1";
+export { renderToTerminal } from "./terminal";
+export { TerminalCanvas } from "./canvas";
+export * from "./colors";
