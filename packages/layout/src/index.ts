@@ -5,6 +5,10 @@ import type {
 	SequenceAST,
 	ClassAST,
 	ERAST,
+	PieAST,
+	GanttAST,
+	MindmapAST,
+	MindmapNode,
 } from "@crafter/mermaid-parser";
 import type {
 	LayoutOptions,
@@ -453,7 +457,338 @@ export function layout(
 		return layoutHierarchicalDiagram(nodes, edges, mergedOptions, "TB");
 	}
 
+	if (ast.type === "pie") {
+		return layoutPieDiagram(ast, mergedOptions);
+	}
+
+	if (ast.type === "gantt") {
+		return layoutGanttDiagram(ast, mergedOptions);
+	}
+
+	if (ast.type === "mindmap") {
+		return layoutMindmapDiagram(ast, mergedOptions);
+	}
+
 	throw new Error(`Unsupported diagram type: ${(ast as { type: string }).type}`);
+}
+
+function layoutPieDiagram(
+	ast: PieAST,
+	options: LayoutOptions,
+): PositionedGraph {
+	const padding = options.padding ?? 20;
+	const radius = 120;
+	const cx = padding + radius;
+	const titleHeight = ast.title ? 30 : 0;
+	const cy = padding + titleHeight + radius;
+
+	const total = ast.slices.reduce((sum, s) => sum + s.value, 0);
+	if (total === 0) {
+		return { width: padding * 2, height: padding * 2, nodes: [], edges: [], groups: [] };
+	}
+
+	const positionedNodes: PositionedNode[] = [];
+	let startAngle = -Math.PI / 2;
+
+	for (let i = 0; i < ast.slices.length; i++) {
+		const slice = ast.slices[i]!;
+		const sliceAngle = (slice.value / total) * Math.PI * 2;
+		const midAngle = startAngle + sliceAngle / 2;
+
+		const labelRadius = radius * 0.65;
+		const labelX = cx + labelRadius * Math.cos(midAngle);
+		const labelY = cy + labelRadius * Math.sin(midAngle);
+
+		positionedNodes.push({
+			id: `slice-${i}`,
+			label: slice.label,
+			shape: "pie-slice",
+			x: labelX - 30,
+			y: labelY - 12,
+			width: 60,
+			height: 24,
+			inlineStyle: {
+				cx: String(cx),
+				cy: String(cy),
+				radius: String(radius),
+				startAngle: String(startAngle),
+				endAngle: String(startAngle + sliceAngle),
+				value: String(slice.value),
+				percent: String(Math.round((slice.value / total) * 100)),
+				index: String(i),
+			},
+		});
+
+		startAngle += sliceAngle;
+	}
+
+	if (ast.title) {
+		positionedNodes.unshift({
+			id: "pie-title",
+			label: ast.title,
+			shape: "pie-title",
+			x: cx - 80,
+			y: padding,
+			width: 160,
+			height: 24,
+		});
+	}
+
+	const width = cx + radius + padding;
+	const height = cy + radius + padding;
+
+	return { width, height, nodes: positionedNodes, edges: [], groups: [] };
+}
+
+function layoutGanttDiagram(
+	ast: GanttAST,
+	options: LayoutOptions,
+): PositionedGraph {
+	const padding = options.padding ?? 20;
+	const barHeight = 28;
+	const barSpacing = 6;
+	const sectionHeaderHeight = 24;
+	const labelWidth = 140;
+	const dayWidth = 8;
+	const titleHeight = ast.title ? 30 : 0;
+
+	const allTasks = ast.sections.flatMap((s) => s.tasks);
+	if (allTasks.length === 0) {
+		return { width: padding * 2, height: padding * 2, nodes: [], edges: [], groups: [] };
+	}
+
+	let minDay = 0;
+	let maxDay = 100;
+	let taskIndex = 0;
+	const taskEndDays = new Map<string, number>();
+
+	for (const section of ast.sections) {
+		for (const task of section.tasks) {
+			let startDay = taskIndex * 15;
+			let durationDays = 30;
+
+			if (task.afterId && taskEndDays.has(task.afterId)) {
+				startDay = taskEndDays.get(task.afterId)!;
+			}
+			if (task.duration) {
+				const match = task.duration.match(/(\d+)d/);
+				if (match?.[1]) durationDays = parseInt(match[1]);
+			}
+
+			const endDay = startDay + durationDays;
+			if (task.id) taskEndDays.set(task.id, endDay);
+			maxDay = Math.max(maxDay, endDay);
+			taskIndex++;
+		}
+	}
+
+	const timelineWidth = (maxDay - minDay) * dayWidth;
+	const positionedNodes: PositionedNode[] = [];
+	const groups: PositionedGroup[] = [];
+	let currentY = padding + titleHeight;
+	taskIndex = 0;
+
+	if (ast.title) {
+		positionedNodes.push({
+			id: "gantt-title",
+			label: ast.title,
+			shape: "gantt-title",
+			x: padding,
+			y: padding,
+			width: labelWidth + timelineWidth,
+			height: 24,
+		});
+	}
+
+	for (const section of ast.sections) {
+		const sectionStartY = currentY;
+
+		positionedNodes.push({
+			id: `section-${section.name}`,
+			label: section.name,
+			shape: "gantt-section",
+			x: padding,
+			y: currentY,
+			width: labelWidth + timelineWidth,
+			height: sectionHeaderHeight,
+		});
+		currentY += sectionHeaderHeight + barSpacing;
+
+		for (const task of section.tasks) {
+			let startDay = taskIndex * 15;
+			let durationDays = 30;
+
+			if (task.afterId && taskEndDays.has(task.afterId)) {
+				startDay = taskEndDays.get(task.afterId)!;
+			} else if (task.startDate) {
+				startDay = taskIndex * 15;
+			}
+			if (task.duration) {
+				const match = task.duration.match(/(\d+)d/);
+				if (match?.[1]) durationDays = parseInt(match[1]);
+			}
+
+			const barX = padding + labelWidth + (startDay - minDay) * dayWidth;
+			const barW = durationDays * dayWidth;
+
+			positionedNodes.push({
+				id: task.id || `task-${taskIndex}`,
+				label: task.label,
+				shape: "gantt-bar",
+				x: barX,
+				y: currentY,
+				width: barW,
+				height: barHeight,
+				inlineStyle: {
+					status: task.status || "default",
+					labelX: String(padding),
+					labelWidth: String(labelWidth),
+				},
+			});
+
+			currentY += barHeight + barSpacing;
+			taskIndex++;
+		}
+
+		const sectionHeight = currentY - sectionStartY;
+		groups.push({
+			id: `group-${section.name}`,
+			label: section.name,
+			x: padding,
+			y: sectionStartY,
+			width: labelWidth + timelineWidth,
+			height: sectionHeight,
+			children: [],
+		});
+	}
+
+	const width = padding + labelWidth + timelineWidth + padding;
+	const height = currentY + padding;
+
+	return { width, height, nodes: positionedNodes, edges: [], groups: [] };
+}
+
+function layoutMindmapNode(
+	node: MindmapNode,
+	cx: number,
+	cy: number,
+	angle: number,
+	spread: number,
+	depth: number,
+	positionedNodes: PositionedNode[],
+	positionedEdges: PositionedEdge[],
+): void {
+	const labelWidth = Math.max(node.label.length * 9 + 20, 60);
+	const labelHeight = 32;
+	const shapeMap: Record<string, string> = {
+		default: "rounded",
+		rounded: "rounded",
+		circle: "circle",
+		bang: "hexagon",
+		cloud: "cloud",
+		hexagon: "hexagon",
+	};
+
+	positionedNodes.push({
+		id: node.id,
+		label: node.label,
+		shape: shapeMap[node.shape] || "rounded",
+		x: cx - labelWidth / 2,
+		y: cy - labelHeight / 2,
+		width: labelWidth,
+		height: labelHeight,
+	});
+
+	if (node.children.length === 0) return;
+
+	const childSpread = spread / Math.max(node.children.length, 1);
+	const startAngle = angle - spread / 2 + childSpread / 2;
+	const ringRadius = 120 + depth * 30;
+
+	for (let i = 0; i < node.children.length; i++) {
+		const child = node.children[i]!;
+		const childAngle = startAngle + i * childSpread;
+		const childX = cx + ringRadius * Math.cos(childAngle);
+		const childY = cy + ringRadius * Math.sin(childAngle);
+
+		positionedEdges.push({
+			source: node.id,
+			target: child.id,
+			style: "solid",
+			hasArrowStart: false,
+			hasArrowEnd: false,
+			points: [
+				{ x: cx, y: cy },
+				{ x: childX, y: childY },
+			],
+		});
+
+		layoutMindmapNode(
+			child,
+			childX,
+			childY,
+			childAngle,
+			childSpread * 1.2,
+			depth + 1,
+			positionedNodes,
+			positionedEdges,
+		);
+	}
+}
+
+function layoutMindmapDiagram(
+	ast: MindmapAST,
+	options: LayoutOptions,
+): PositionedGraph {
+	const padding = options.padding ?? 40;
+
+	const positionedNodes: PositionedNode[] = [];
+	const positionedEdges: PositionedEdge[] = [];
+
+	const cx = 300;
+	const cy = 300;
+
+	layoutMindmapNode(
+		ast.root,
+		cx,
+		cy,
+		0,
+		Math.PI * 2,
+		0,
+		positionedNodes,
+		positionedEdges,
+	);
+
+	let minX = Infinity;
+	let minY = Infinity;
+	let maxX = -Infinity;
+	let maxY = -Infinity;
+
+	for (const n of positionedNodes) {
+		minX = Math.min(minX, n.x);
+		minY = Math.min(minY, n.y);
+		maxX = Math.max(maxX, n.x + n.width);
+		maxY = Math.max(maxY, n.y + n.height);
+	}
+
+	const shiftX = padding - minX;
+	const shiftY = padding - minY;
+
+	for (const n of positionedNodes) {
+		n.x += shiftX;
+		n.y += shiftY;
+	}
+	for (const e of positionedEdges) {
+		for (const p of e.points) {
+			p.x += shiftX;
+			p.y += shiftY;
+		}
+	}
+
+	const width = maxX - minX + padding * 2;
+	const height = maxY - minY + padding * 2;
+
+	return { width, height, nodes: positionedNodes, edges: positionedEdges, groups: [] };
 }
 
 export * from "./types";
