@@ -6,6 +6,39 @@ function splitLabel(label: string): string[] {
 }
 
 export function renderNodeLabel(node: PositionedNode, ctx: RenderContext): string {
+	if (node.shape === "pie-slice") {
+		const cx = node.x + node.width / 2;
+		const cy = node.y + node.height / 2;
+		const percent = node.inlineStyle?.percent || "";
+		return `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="11" font-weight="600">${escapeXml(node.label)} ${percent}%</text>`;
+	}
+
+	if (node.shape === "pie-title") {
+		const cx = node.x + node.width / 2;
+		const cy = node.y + node.height / 2;
+		return `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="16" font-weight="600">${escapeXml(node.label)}</text>`;
+	}
+
+	if (node.shape === "gantt-title") {
+		const cx = node.x + node.width / 2;
+		const cy = node.y + node.height / 2;
+		return `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="16" font-weight="600">${escapeXml(node.label)}</text>`;
+	}
+
+	if (node.shape === "gantt-section") {
+		const x = node.x + 8;
+		const cy = node.y + node.height / 2;
+		return `<text x="${x}" y="${cy}" dominant-baseline="middle" fill="var(--_group-text)" font-family="${ctx.font}" font-size="12" font-weight="600">${escapeXml(node.label)}</text>`;
+	}
+
+	if (node.shape === "gantt-bar") {
+		const labelX = parseFloat(node.inlineStyle?.labelX || "0") + 4;
+		const cy = node.y + node.height / 2;
+		const barLabel = `<text x="${node.x + 6}" y="${cy}" dominant-baseline="middle" fill="var(--bg)" font-family="${ctx.font}" font-size="11" font-weight="500">${escapeXml(node.label)}</text>`;
+		const sideLabel = `<text x="${labelX}" y="${cy}" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="11" font-weight="400">${escapeXml(node.label)}</text>`;
+		return sideLabel + barLabel;
+	}
+
 	const lines = splitLabel(node.label);
 	const cx = node.x + node.width / 2;
 	const cy = node.y + node.height / 2;

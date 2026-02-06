@@ -162,6 +162,55 @@ function stateEnd(node: PositionedNode, ctx: RenderContext): string {
 	return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--_text)" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="${innerR}" fill="var(--_text)" stroke="none"/>`;
 }
 
+const PIE_COLORS = [
+	"#4e79a7", "#f28e2b", "#e15759", "#76b7b2",
+	"#59a14f", "#edc948", "#b07aa1", "#ff9da7",
+	"#9c755f", "#bab0ac",
+];
+
+function pieSlice(node: PositionedNode, _ctx: RenderContext): string {
+	if (!node.inlineStyle) return "";
+	const cx = parseFloat(node.inlineStyle.cx);
+	const cy = parseFloat(node.inlineStyle.cy);
+	const r = parseFloat(node.inlineStyle.radius);
+	const start = parseFloat(node.inlineStyle.startAngle);
+	const end = parseFloat(node.inlineStyle.endAngle);
+	const idx = parseInt(node.inlineStyle.index);
+	const color = PIE_COLORS[idx % PIE_COLORS.length];
+
+	const x1 = cx + r * Math.cos(start);
+	const y1 = cy + r * Math.sin(start);
+	const x2 = cx + r * Math.cos(end);
+	const y2 = cy + r * Math.sin(end);
+	const largeArc = end - start > Math.PI ? 1 : 0;
+
+	const path = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+	return `<path d="${path}" fill="${color}" stroke="var(--bg)" stroke-width="2"/>`;
+}
+
+function pieTitle(node: PositionedNode, ctx: RenderContext): string {
+	return "";
+}
+
+function ganttSection(node: PositionedNode, _ctx: RenderContext): string {
+	return `<rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" fill="var(--_group-fill)" stroke="none" rx="2"/>`;
+}
+
+function ganttBar(node: PositionedNode, _ctx: RenderContext): string {
+	const status = node.inlineStyle?.status || "default";
+	let fill = "var(--_node-fill)";
+	let stroke = "var(--_node-stroke)";
+	if (status === "done") fill = "var(--_muted)";
+	if (status === "active") fill = "var(--_node-stroke)";
+	if (status === "crit") { fill = "#e15759"; stroke = "#c44040"; }
+
+	return `<rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" fill="${fill}" stroke="${stroke}" stroke-width="1" rx="4"/>`;
+}
+
+function ganttTitle(node: PositionedNode, _ctx: RenderContext): string {
+	return "";
+}
+
 const SHAPE_RENDERERS: Record<string, ShapeRenderer> = {
 	rectangle,
 	rounded,
@@ -180,6 +229,11 @@ const SHAPE_RENDERERS: Record<string, ShapeRenderer> = {
 	cloud,
 	"state-start": stateStart,
 	"state-end": stateEnd,
+	"pie-slice": pieSlice,
+	"pie-title": pieTitle,
+	"gantt-section": ganttSection,
+	"gantt-bar": ganttBar,
+	"gantt-title": ganttTitle,
 };
 
 export function renderShape(node: PositionedNode, ctx: RenderContext): string {
