@@ -2,6 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { useDiagramTheme, THEME_NAMES } from "./theme-context";
 
 function ThemeToggle() {
 	const { resolvedTheme, setTheme } = useTheme();
@@ -14,7 +15,7 @@ function ThemeToggle() {
 	return (
 		<button
 			onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-			className="w-8 h-8 flex items-center justify-center rounded-md border border-[var(--border)] hover:border-[var(--border-hover)] transition-colors"
+			className="w-8 h-8 flex items-center justify-center rounded-md border border-[var(--border)] hover:border-[var(--border-hover)] transition-colors cursor-pointer"
 			aria-label="Toggle theme"
 		>
 			{resolvedTheme === "dark" ? (
@@ -31,6 +32,28 @@ function ThemeToggle() {
 	);
 }
 
+function DiagramThemePicker() {
+	const { themeName, setThemeName } = useDiagramTheme();
+	const [mounted, setMounted] = useState(false);
+
+	useEffect(() => setMounted(true), []);
+
+	if (!mounted) return null;
+
+	return (
+		<select
+			value={themeName}
+			onChange={(e) => setThemeName(e.target.value as typeof themeName)}
+			className="text-[11px] font-mono bg-[var(--bg-tertiary)] border border-[var(--border)] rounded px-2 py-1 text-[var(--text-secondary)] cursor-pointer hover:border-[var(--border-hover)] transition-colors max-w-[140px]"
+			title="Diagram theme"
+		>
+			{THEME_NAMES.map((t) => (
+				<option key={t} value={t}>{t}</option>
+			))}
+		</select>
+	);
+}
+
 export function Navbar() {
 	return (
 		<nav className="fixed top-0 left-0 right-0 z-50 border-b border-[var(--border)] bg-[var(--bg-primary)]/80 backdrop-blur-md">
@@ -43,12 +66,14 @@ export function Navbar() {
 
 				<div className="hidden md:flex items-center gap-6 text-sm text-[var(--text-muted)]">
 					<a href="#playground" className="hover:text-[var(--text-primary)] transition-colors">Playground</a>
+					<a href="#samples" className="hover:text-[var(--text-primary)] transition-colors">Samples</a>
 					<a href="#features" className="hover:text-[var(--text-primary)] transition-colors">Features</a>
 					<a href="#packages" className="hover:text-[var(--text-primary)] transition-colors">Packages</a>
 					<a href="https://github.com/crafter-station/mermaid" target="_blank" rel="noopener noreferrer" className="hover:text-[var(--text-primary)] transition-colors">GitHub</a>
 				</div>
 
-				<div className="flex items-center gap-3">
+				<div className="flex items-center gap-2">
+					<DiagramThemePicker />
 					<ThemeToggle />
 					<a
 						href="https://github.com/crafter-station/mermaid"

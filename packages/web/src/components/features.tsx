@@ -36,13 +36,13 @@ export function Features() {
 		<section id="features" className="py-24 px-6">
 			<div className="mx-auto max-w-6xl">
 				<p className="font-mono text-xs tracking-[0.15em] uppercase text-[var(--accent-cyan)] mb-3 text-center">
-					Features
+					What you get
 				</p>
 				<h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-center mb-4">
 					Everything you need, nothing you don&apos;t
 				</h2>
 				<p className="text-[var(--text-muted)] text-center mb-12 max-w-lg mx-auto">
-					Built from scratch. Every byte justified.
+					Every feature built from scratch. Every byte justified.
 				</p>
 
 				<div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

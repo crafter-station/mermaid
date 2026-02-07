@@ -14,13 +14,13 @@ export function Comparison() {
 		<section className="py-24 px-6">
 			<div className="mx-auto max-w-4xl">
 				<p className="font-mono text-xs tracking-[0.15em] uppercase text-[var(--accent-cyan)] mb-3 text-center">
-					Why switch
+					Side by side
 				</p>
 				<h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-center mb-4">
-					125x lighter than mermaid.js
+					2MB vs 16.8KB. You do the math.
 				</h2>
 				<p className="text-[var(--text-muted)] text-center mb-12 max-w-lg mx-auto">
-					Same diagrams, fraction of the size. No dependencies, no async, no bloat.
+					Same diagram syntax. Same output. Everything else is smaller, faster, or just better.
 				</p>
 
 				<div className="rounded-xl border border-[var(--border)] overflow-hidden">

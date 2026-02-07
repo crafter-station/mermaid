@@ -15,10 +15,10 @@ export function FooterCTA() {
 		<section className="py-24 px-6 border-t border-[var(--border)]">
 			<div className="mx-auto max-w-2xl text-center">
 				<h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-					Ready to ship lighter diagrams?
+					Drop 2MB from your bundle today.
 				</h2>
 				<p className="text-[var(--text-muted)] mb-8">
-					Install in seconds. Start rendering in milliseconds.
+					One command. Zero config. Diagrams rendering in under 1ms.
 				</p>
 
 				<button

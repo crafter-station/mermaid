@@ -13,13 +13,13 @@ export function Packages() {
 		<section id="packages" className="py-24 px-6">
 			<div className="mx-auto max-w-4xl">
 				<p className="font-mono text-xs tracking-[0.15em] uppercase text-[var(--accent-cyan)] mb-3 text-center">
-					Packages
+					Install what you need
 				</p>
 				<h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-center mb-4">
-					7 packages, one ecosystem
+					7 packages, pay for what you use
 				</h2>
 				<p className="text-[var(--text-muted)] text-center mb-12 max-w-lg mx-auto">
-					Use the umbrella or pick only what you need. Tree-shakeable, independently versioned.
+					Need just the parser? Import it. Want everything? One umbrella package. Each one independently versioned.
 				</p>
 
 				<div className="space-y-2">

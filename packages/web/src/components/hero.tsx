@@ -11,14 +11,13 @@ export function Hero() {
 						</p>
 
 						<h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6">
-							Diagrams that don&apos;t bloat{" "}
-							<span className="text-[var(--accent-blue)]">your bundle</span>
+							Mermaid diagrams.{" "}
+							<span className="text-[var(--accent-blue)]">Without the 2MB tax.</span>
 						</h1>
 
 						<p className="text-lg text-[var(--text-secondary)] mb-8 max-w-lg">
-							Ultra-lightweight Mermaid rendering engine. Parse, lay out, and render
-							8 diagram types with a synchronous API, 32 themes, and full
-							interactivity.
+							Drop-in Mermaid rendering at 16.8KB. Same diagram syntax, synchronous API,
+							32 themes — built from scratch with zero dependencies.
 						</p>
 
 						<div className="flex flex-wrap gap-3">
@@ -26,7 +25,7 @@ export function Hero() {
 								href="#playground"
 								className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-medium bg-[var(--accent-blue)] text-white hover:opacity-90 transition-opacity"
 							>
-								Try the Playground
+								See It Render
 							</a>
 							<a
 								href="https://github.com/crafter-station/mermaid"

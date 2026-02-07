@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTheme } from "next-themes";
+import { useDiagramTheme, THEME_NAMES, type ThemeName } from "./theme-context";
 
 const DEFAULT_SOURCE = `graph TD
   A[Start] --> B{Decision}
@@ -11,14 +11,7 @@ const DEFAULT_SOURCE = `graph TD
   D --> F[Fix]
   F --> B`;
 
-const THEME_NAMES = [
-	"tokyo-night", "catppuccin-mocha", "catppuccin-latte", "nord", "dracula",
-	"github-light", "github-dark", "one-dark", "solarized-dark", "solarized-light",
-	"monokai", "gruvbox-dark", "gruvbox-light", "rose-pine", "rose-pine-dawn",
-	"ayu-dark", "ayu-light", "vesper", "vitesse-dark", "vitesse-light",
-	"kanagawa", "everforest-dark", "everforest-light", "material-dark", "material-light",
-	"poimandres", "night-owl", "one-hunter", "zinc-dark", "zinc-light",
-];
+const PANEL_HEIGHT = "h-[400px] md:h-[480px]";
 
 interface Step {
 	type: "node" | "edge";
@@ -164,12 +157,11 @@ type Mode = "edit" | "play";
 
 export function Playground() {
 	const [source, setSource] = useState(DEFAULT_SOURCE);
-	const [themeName, setThemeName] = useState("tokyo-night");
+	const { themeName, setThemeName, getThemeObject } = useDiagramTheme();
 	const [error, setError] = useState<string | null>(null);
 	const [renderTime, setRenderTime] = useState<number | null>(null);
 	const [ready, setReady] = useState(false);
 	const outputRef = useRef<HTMLDivElement>(null);
-	const { resolvedTheme } = useTheme();
 
 	const [mode, setMode] = useState<Mode>("edit");
 	const [steps, setSteps] = useState<Step[]>([]);
@@ -177,11 +169,6 @@ export function Playground() {
 	const [playing, setPlaying] = useState(false);
 	const fullGraphRef = useRef<Record<string, unknown> | null>(null);
 	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-	const getTheme = useCallback(() => {
-		if (!window.crafterMermaid) return {};
-		return window.crafterMermaid.THEMES[themeName] || {};
-	}, [themeName]);
 
 	useEffect(() => {
 		if (!window.crafterMermaid) {
@@ -219,14 +206,6 @@ export function Playground() {
 		return () => clearTimeout(timer);
 	}, [renderDiagram, mode]);
 
-	useEffect(() => {
-		if (resolvedTheme === "dark" && themeName.includes("light")) {
-			setThemeName("tokyo-night");
-		} else if (resolvedTheme === "light" && !themeName.includes("light") && !["zinc-dark"].includes(themeName)) {
-			setThemeName("github-light");
-		}
-	}, [resolvedTheme]);
-
 	const enterPlayMode = useCallback(() => {
 		if (!window.crafterMermaid || !ready) return;
 
@@ -241,8 +220,10 @@ export function Playground() {
 		const decomposed = smartDecompose(fg, sourceLines);
 		setSteps(decomposed);
 		setCurrentStep(-1);
-		setPlaying(false);
 		setMode("play");
+		setTimeout(() => {
+			setPlaying(true);
+		}, 100);
 	}, [source, ready]);
 
 	const exitPlayMode = useCallback(() => {
@@ -262,13 +243,13 @@ export function Playground() {
 		if (currentStep === -1) {
 			const fg = fullGraphRef.current as { width: number; height: number; groups: unknown[] };
 			const emptyGraph = { width: fg.width, height: fg.height, nodes: [], edges: [], groups: fg.groups };
-			outputRef.current.innerHTML = window.crafterMermaid.renderToString(emptyGraph, { theme: getTheme() });
+			outputRef.current.innerHTML = window.crafterMermaid.renderToString(emptyGraph, { theme: getThemeObject() });
 			return;
 		}
 
-		const svg = renderAtStep(fullGraphRef.current, steps, currentStep, getTheme());
+		const svg = renderAtStep(fullGraphRef.current, steps, currentStep, getThemeObject());
 		outputRef.current.innerHTML = svg;
-	}, [currentStep, steps, getTheme, mode]);
+	}, [currentStep, steps, getThemeObject, mode]);
 
 	useEffect(() => {
 		if (mode === "play") renderCurrentStep();
@@ -336,13 +317,13 @@ export function Playground() {
 		<section id="playground" className="py-24 px-6">
 			<div className="mx-auto max-w-6xl">
 				<p className="font-mono text-xs tracking-[0.15em] uppercase text-[var(--accent-cyan)] mb-3 text-center">
-					Interactive
+					Try it now
 				</p>
 				<h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-center mb-4">
-					Live Playground
+					Edit. Render. Animate.
 				</h2>
 				<p className="text-[var(--text-muted)] text-center mb-12 max-w-lg mx-auto">
-					Edit the source and watch it render live — or hit play to animate it step by step.
+					Type diagram syntax on the left, see the SVG on the right. Hit play to watch it build step by step.
 				</p>
 
 				<div className="rounded-xl border border-[var(--border)] overflow-hidden">
@@ -376,7 +357,7 @@ export function Playground() {
 							)}
 							<select
 								value={themeName}
-								onChange={(e) => setThemeName(e.target.value)}
+								onChange={(e) => setThemeName(e.target.value as ThemeName)}
 								className="text-xs font-mono bg-[var(--bg-tertiary)] border border-[var(--border)] rounded px-2 py-1 text-[var(--text-secondary)] cursor-pointer"
 							>
 								{THEME_NAMES.map((t) => (
@@ -393,11 +374,11 @@ export function Playground() {
 									value={source}
 									onChange={(e) => setSource(e.target.value)}
 									spellCheck={false}
-									className="w-full h-80 md:h-96 p-4 font-mono text-sm bg-[var(--code-bg)] text-[var(--text-primary)] resize-none focus:outline-none"
+									className={`w-full ${PANEL_HEIGHT} p-4 font-mono text-sm bg-[var(--code-bg)] text-[var(--text-primary)] resize-none focus:outline-none`}
 									placeholder="Type mermaid diagram syntax..."
 								/>
 							) : (
-								<div className="w-full h-80 md:h-96 overflow-auto bg-[var(--code-bg)]">
+								<div className={`w-full ${PANEL_HEIGHT} overflow-auto bg-[var(--code-bg)]`}>
 									<pre className="p-4 font-mono text-sm leading-6">
 										{sourceLines.map((line, i) => (
 											<div
@@ -419,7 +400,7 @@ export function Playground() {
 							)}
 						</div>
 
-						<div className="relative min-h-80 md:min-h-96 bg-[var(--bg-card)] flex items-center justify-center p-4">
+						<div className={`relative ${PANEL_HEIGHT} bg-[var(--bg-card)] flex items-center justify-center p-4`}>
 							{error && mode === "edit" ? (
 								<div className="text-sm font-mono text-[var(--accent-orange)] text-center max-w-sm">
 									{error}
@@ -438,7 +419,7 @@ export function Playground() {
 							<>
 								<button
 									onClick={enterPlayMode}
-									className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono bg-[var(--accent-blue)] text-white hover:opacity-90 transition-opacity"
+									className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono bg-[var(--accent-blue)] text-white hover:opacity-90 transition-opacity cursor-pointer"
 								>
 									<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
 										<polygon points="5 3 19 12 5 21 5 3" />
@@ -454,7 +435,7 @@ export function Playground() {
 								<div className="flex items-center gap-1">
 									<button
 										onClick={exitPlayMode}
-										className="p-2 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+										className="p-2 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
 										title="Back to editor"
 									>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -465,7 +446,7 @@ export function Playground() {
 
 									<button
 										onClick={handleReset}
-										className="p-2 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+										className="p-2 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
 										title="Reset"
 									>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -475,7 +456,7 @@ export function Playground() {
 
 									<button
 										onClick={handleStepBackward}
-										className="p-2 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+										className="p-2 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
 										title="Step backward"
 									>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -487,7 +468,7 @@ export function Playground() {
 									{playing ? (
 										<button
 											onClick={handlePause}
-											className="p-2 rounded-md bg-[var(--accent-blue)] text-white hover:opacity-90 transition-opacity"
+											className="p-2 rounded-md bg-[var(--accent-blue)] text-white hover:opacity-90 transition-opacity cursor-pointer"
 											title="Pause"
 										>
 											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -498,7 +479,7 @@ export function Playground() {
 									) : (
 										<button
 											onClick={handlePlay}
-											className="p-2 rounded-md bg-[var(--accent-blue)] text-white hover:opacity-90 transition-opacity"
+											className="p-2 rounded-md bg-[var(--accent-blue)] text-white hover:opacity-90 transition-opacity cursor-pointer"
 											title="Play"
 										>
 											<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -509,7 +490,7 @@ export function Playground() {
 
 									<button
 										onClick={handleStepForward}
-										className="p-2 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+										className="p-2 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
 										title="Step forward"
 									>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

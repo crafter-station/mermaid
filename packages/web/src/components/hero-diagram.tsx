@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useTheme } from "next-themes";
 import Script from "next/script";
+import { useDiagramTheme } from "./theme-context";
 
 declare global {
 	interface Window {
@@ -26,12 +26,11 @@ const DIAGRAM = `graph TD
 export function HeroDiagram() {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [ready, setReady] = useState(false);
-	const { resolvedTheme } = useTheme();
+	const { themeName } = useDiagramTheme();
 
 	useEffect(() => {
 		if (!ready || !containerRef.current || !window.crafterMermaid) return;
 
-		const themeName = resolvedTheme === "dark" ? "tokyo-night" : "github-light";
 		try {
 			const svg = window.crafterMermaid.render(DIAGRAM, {
 				theme: window.crafterMermaid.THEMES[themeName],
@@ -40,7 +39,7 @@ export function HeroDiagram() {
 		} catch {
 			// silently ignore
 		}
-	}, [ready, resolvedTheme]);
+	}, [ready, themeName]);
 
 	return (
 		<>

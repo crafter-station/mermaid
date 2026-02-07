@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { ThemeProvider } from "next-themes";
+import { DiagramThemeProvider } from "@/components/theme-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -37,7 +38,9 @@ export default function RootLayout({
 		>
 			<body className="font-sans antialiased">
 				<ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-					{children}
+					<DiagramThemeProvider>
+						{children}
+					</DiagramThemeProvider>
 				</ThemeProvider>
 			</body>
 		</html>
