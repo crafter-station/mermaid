@@ -17,9 +17,9 @@ Zero-dependency Mermaid diagram parser that outputs an AST with source spans.
 - ✅ Sequence Diagram (`sequenceDiagram`)
 - ✅ Class Diagram (`classDiagram`)
 - ✅ ER Diagram (`erDiagram`)
-- ⏳ Pie Chart (`pie`)
-- ⏳ Gantt Chart (`gantt`)
-- ⏳ Mindmap (`mindmap`)
+- ✅ Pie Chart (`pie`)
+- ✅ Gantt Chart (`gantt`)
+- ✅ Mindmap (`mindmap`)
 
 ## Installation
 

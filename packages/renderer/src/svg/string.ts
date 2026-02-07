@@ -19,6 +19,38 @@ function renderGroups(groups: PositionedGroup[], ctx: RenderContext): string {
 		.join("");
 }
 
+function renderDebugOverlays(graph: PositionedGraph, ctx: RenderContext): string {
+	if (!ctx.debug) return "";
+
+	const parts: string[] = [];
+
+	const gridSize = 50;
+	const maxX = graph.width + ctx.padding * 2;
+	const maxY = graph.height + ctx.padding * 2;
+
+	for (let x = 0; x <= maxX; x += gridSize) {
+		parts.push(`<line x1="${x}" y1="0" x2="${x}" y2="${maxY}" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>`);
+		parts.push(`<text x="${x + 2}" y="10" fill="rgba(255,255,255,0.3)" font-size="8" font-family="monospace">${x}</text>`);
+	}
+	for (let y = 0; y <= maxY; y += gridSize) {
+		parts.push(`<line x1="0" y1="${y}" x2="${maxX}" y2="${y}" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>`);
+		parts.push(`<text x="2" y="${y - 2}" fill="rgba(255,255,255,0.3)" font-size="8" font-family="monospace">${y}</text>`);
+	}
+
+	for (const node of graph.nodes) {
+		parts.push(`<rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" fill="none" stroke="rgba(239,68,68,0.5)" stroke-width="0.5" stroke-dasharray="3 2"/>`);
+		parts.push(`<text x="${node.x}" y="${node.y - 4}" fill="rgba(239,68,68,0.7)" font-size="9" font-family="monospace">${node.id}</text>`);
+	}
+
+	for (const edge of graph.edges) {
+		for (const point of edge.points) {
+			parts.push(`<circle cx="${point.x}" cy="${point.y}" r="3" fill="rgba(59,130,246,0.6)" stroke="rgba(59,130,246,0.8)" stroke-width="0.5"/>`);
+		}
+	}
+
+	return `<g class="debug-overlays">${parts.join("")}</g>`;
+}
+
 export function renderToString(graph: PositionedGraph, options?: RenderOptions): string {
 	const theme = options?.theme ?? DEFAULTS;
 	const padding = options?.padding ?? 16;
@@ -72,6 +104,8 @@ export function renderToString(graph: PositionedGraph, options?: RenderOptions):
 		})
 		.join("");
 
+	const debugMarkup = renderDebugOverlays(graph, ctx);
+
 	const content = `
 		<svg id="${svgId}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
 			${styleBlock}
@@ -83,6 +117,7 @@ export function renderToString(graph: PositionedGraph, options?: RenderOptions):
 				${edgeLabelsMarkup}
 				${nodesMarkup}
 			</g>
+			${debugMarkup}
 		</svg>
 	`
 		.split("\n")
