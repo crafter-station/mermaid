@@ -136,7 +136,7 @@ graph TD
 });
 
 describe("Timeline decomposition", () => {
-	it("decomposes flowchart into nodes then edges", () => {
+	it("decomposes flowchart with smart BFS order (node->edge->node)", () => {
 		const diagram = `
 graph TD
   A[Start] --> B[Process]
@@ -151,12 +151,14 @@ graph TD
 
 			expect(steps[0]?.type).toBe("node");
 			expect(steps[0]?.id).toBe("A");
-			expect(steps[1]?.type).toBe("node");
-			expect(steps[1]?.id).toBe("B");
+			expect(steps[1]?.type).toBe("edge");
+			expect(steps[1]?.id).toBe("A->B");
 			expect(steps[2]?.type).toBe("node");
-			expect(steps[2]?.id).toBe("C");
+			expect(steps[2]?.id).toBe("B");
 			expect(steps[3]?.type).toBe("edge");
-			expect(steps[4]?.type).toBe("edge");
+			expect(steps[3]?.id).toBe("B->C");
+			expect(steps[4]?.type).toBe("node");
+			expect(steps[4]?.id).toBe("C");
 		}
 	});
 
@@ -182,7 +184,7 @@ sequenceDiagram
 		}
 	});
 
-	it("decomposes class diagram classes then relations", () => {
+	it("decomposes class diagram with on-demand node emit", () => {
 		const diagram = `
 classDiagram
   class Animal
@@ -204,7 +206,7 @@ classDiagram
 		}
 	});
 
-	it("decomposes ER diagram entities then relations", () => {
+	it("decomposes ER diagram with on-demand entity emit", () => {
 		const diagram = `
 erDiagram
   CUSTOMER ||--o{ ORDER : places
