@@ -219,9 +219,8 @@ export function enableZoomPan(svg: SVGSVGElement, options?: ZoomPanOptions): () 
 
 	svg.addEventListener("wheel", handleWheel, { passive: false });
 	svg.addEventListener("mousedown", handleMouseDown);
-	svg.addEventListener("mousemove", handleMouseMove);
-	svg.addEventListener("mouseup", handleMouseUp);
-	svg.addEventListener("mouseleave", handleMouseUp);
+	document.addEventListener("mousemove", handleMouseMove);
+	document.addEventListener("mouseup", handleMouseUp);
 	svg.addEventListener("dblclick", handleDoubleClick);
 	svg.addEventListener("touchstart", handleTouchStart, { passive: false });
 	svg.addEventListener("touchmove", handleTouchMove, { passive: false });
@@ -231,9 +230,8 @@ export function enableZoomPan(svg: SVGSVGElement, options?: ZoomPanOptions): () 
 		svg.style.cursor = "";
 		svg.removeEventListener("wheel", handleWheel);
 		svg.removeEventListener("mousedown", handleMouseDown);
-		svg.removeEventListener("mousemove", handleMouseMove);
-		svg.removeEventListener("mouseup", handleMouseUp);
-		svg.removeEventListener("mouseleave", handleMouseUp);
+		document.removeEventListener("mousemove", handleMouseMove);
+		document.removeEventListener("mouseup", handleMouseUp);
 		svg.removeEventListener("dblclick", handleDoubleClick);
 		svg.removeEventListener("touchstart", handleTouchStart);
 		svg.removeEventListener("touchmove", handleTouchMove);
