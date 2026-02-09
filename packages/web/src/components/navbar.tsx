@@ -65,6 +65,7 @@ export function Navbar() {
 				</a>
 
 				<div className="hidden md:flex items-center gap-6 text-sm text-[var(--text-muted)]">
+					<a href="/playground" className="hover:text-[var(--accent-cyan)] transition-colors font-medium">Live Editor</a>
 					<a href="#playground" className="hover:text-[var(--text-primary)] transition-colors">Playground</a>
 					<a href="#samples" className="hover:text-[var(--text-primary)] transition-colors">Samples</a>
 					<a href="#features" className="hover:text-[var(--text-primary)] transition-colors">Features</a>

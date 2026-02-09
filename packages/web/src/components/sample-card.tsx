@@ -115,7 +115,7 @@ function renderAtStep(
 		groups: fg.groups,
 	};
 
-	return window.crafterMermaid.renderToString(filteredGraph, { theme });
+	return window.crafterMermaid.renderToString(filteredGraph, { theme, transparent: true });
 }
 
 interface SampleCardProps {
@@ -141,6 +141,7 @@ export function SampleCard({ title, description, category, source, renderTimeRef
 	const { themeName, getThemeObject } = useDiagramTheme();
 	const svgRef = useRef<HTMLDivElement>(null);
 	const [highlightedHtml, setHighlightedHtml] = useState("");
+	const [asciiHtml, setAsciiHtml] = useState("");
 	const [ready, setReady] = useState(false);
 
 	const [mode, setMode] = useState<"view" | "play">("view");
@@ -172,6 +173,7 @@ export function SampleCard({ title, description, category, source, renderTimeRef
 		try {
 			const svg = window.crafterMermaid.render(source, {
 				theme: window.crafterMermaid.THEMES[themeName],
+				transparent: true,
 			});
 			svgRef.current.innerHTML = svg;
 			renderTimeRef?.(performance.now() - start);
@@ -179,6 +181,19 @@ export function SampleCard({ title, description, category, source, renderTimeRef
 			svgRef.current.innerHTML = '<span class="text-xs text-[var(--accent-orange)] font-mono">Render error</span>';
 		}
 	}, [ready, source, themeName, mode, renderTimeRef]);
+
+	useEffect(() => {
+		if (!ready || !window.crafterMermaid?.renderToAscii) return;
+		try {
+			const html = window.crafterMermaid.renderToAscii(source, {
+				theme: window.crafterMermaid.THEMES[themeName],
+				width: 80,
+			});
+			setAsciiHtml(html);
+		} catch {
+			setAsciiHtml("");
+		}
+	}, [ready, source, themeName]);
 
 	const enterPlayMode = useCallback(() => {
 		if (!window.crafterMermaid || !ready) return;
@@ -208,7 +223,7 @@ export function SampleCard({ title, description, category, source, renderTimeRef
 			const fg = fullGraphRef.current as { width: number; height: number; groups: unknown[] };
 			svgRef.current.innerHTML = window.crafterMermaid.renderToString(
 				{ width: fg.width, height: fg.height, nodes: [], edges: [], groups: fg.groups },
-				{ theme: getThemeObject() },
+				{ theme: getThemeObject(), transparent: true },
 			);
 			return;
 		}
@@ -235,7 +250,7 @@ export function SampleCard({ title, description, category, source, renderTimeRef
 	const accentColor = CATEGORY_COLORS[category] || "var(--accent-blue)";
 
 	return (
-		<div className="rounded-xl border border-[var(--border)] overflow-hidden hover:border-[var(--border-hover)] transition-colors">
+		<div className="flex flex-col rounded-xl border border-[var(--border)] overflow-hidden hover:border-[var(--border-hover)] transition-colors">
 			<div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
 				<div className="flex items-center gap-3 min-w-0">
 					<span
@@ -307,14 +322,14 @@ export function SampleCard({ title, description, category, source, renderTimeRef
 				</div>
 			</div>
 
-			<div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[var(--border)]">
-				<div className="relative h-[240px] overflow-auto bg-[var(--code-bg)]">
+			<div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,2fr)] flex-1 bg-[var(--bg-card)]">
+				<div className="relative overflow-auto">
 					{mode === "play" ? (
-						<pre className="p-4 font-mono text-xs leading-5">
+						<pre className="p-3 font-mono text-[10px] leading-4">
 							{sourceLines.map((line, i) => (
 								<div
 									key={i}
-									className={`px-2 -mx-2 rounded transition-colors duration-300 ${
+									className={`px-1 -mx-1 rounded transition-colors duration-300 ${
 										highlightedLine === i
 											? "bg-[var(--accent-blue)]/15 text-[var(--text-primary)]"
 											: "text-[var(--text-muted)]"
@@ -326,23 +341,23 @@ export function SampleCard({ title, description, category, source, renderTimeRef
 						</pre>
 					) : highlightedHtml ? (
 						<div
-							className="p-4 [&_pre]:!bg-transparent [&_code]:text-xs [&_code]:leading-5"
+							className="p-3 [&_pre]:!bg-transparent [&_code]:text-[10px] [&_code]:leading-4"
 							dangerouslySetInnerHTML={{ __html: highlightedHtml }}
 						/>
 					) : (
-						<pre className="p-4 font-mono text-xs leading-5 text-[var(--text-secondary)]">
+						<pre className="p-3 font-mono text-[10px] leading-4 text-[var(--text-secondary)]">
 							{source}
 						</pre>
 					)}
 				</div>
 
-				<div className="relative h-[240px] bg-[var(--bg-card)] flex items-center justify-center p-4">
+				<div className="relative flex items-center justify-center p-6">
 					<div
 						ref={svgRef}
 						className="w-full h-full flex items-center justify-center [&>svg]:max-w-full [&>svg]:max-h-full [&>svg]:w-auto [&>svg]:h-auto"
 					/>
 					{mode === "play" && steps.length > 0 && (
-						<div className="absolute bottom-2 left-2 right-2">
+						<div className="absolute bottom-3 left-3 right-3">
 							<div className="h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
 								<div
 									className="h-full rounded-full transition-all duration-300"
@@ -354,6 +369,24 @@ export function SampleCard({ title, description, category, source, renderTimeRef
 							</div>
 						</div>
 					)}
+				</div>
+
+				<div className="relative overflow-auto">
+					{asciiHtml ? (
+						<pre
+							className="p-4 font-mono text-[10px] leading-[14px] whitespace-pre"
+							dangerouslySetInnerHTML={{ __html: asciiHtml }}
+						/>
+					) : (
+						<div className="flex items-center justify-center h-full">
+							<span className="text-xs text-[var(--text-muted)] font-mono">ASCII</span>
+						</div>
+					)}
+					<div className="absolute top-2 right-2">
+						<span className="text-[9px] font-mono text-[var(--text-muted)] bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded border border-[var(--border)]">
+							Terminal
+						</span>
+					</div>
 				</div>
 			</div>
 

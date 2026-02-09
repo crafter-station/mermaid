@@ -11,7 +11,16 @@ declare global {
 			parse: (text: string) => { ast: Record<string, unknown> | null };
 			layout: (ast: Record<string, unknown>) => Record<string, unknown>;
 			renderToString: (graph: Record<string, unknown>, options?: Record<string, unknown>) => string;
+			renderToDOM: (graph: Record<string, unknown>, options?: Record<string, unknown>) => SVGSVGElement;
+			renderToAscii: (text: string, options?: Record<string, unknown>) => string;
+			enableZoomPan: (svg: SVGSVGElement, options?: Record<string, unknown>) => () => void;
+			enableKeyboard: (svg: SVGSVGElement) => () => void;
+			enableSearch: (svg: SVGSVGElement, options?: Record<string, unknown>) => () => void;
+			enableHover: (svg: SVGSVGElement) => () => void;
+			enableMinimap: (svg: SVGSVGElement, options?: Record<string, unknown>) => () => void;
+			enableEvents: (svg: SVGSVGElement, callbacks: Record<string, unknown>) => () => void;
 			THEMES: Record<string, Record<string, string>>;
+			DEFAULTS: Record<string, string>;
 		};
 	}
 }

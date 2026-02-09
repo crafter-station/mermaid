@@ -512,7 +512,7 @@ export function SamplesGallery() {
 					})}
 				</div>
 
-				<div className="grid gap-6">
+				<div className="grid gap-8">
 					{filtered.map((sample, i) => {
 						const globalIndex = SAMPLES.indexOf(sample);
 						return (

@@ -2,9 +2,9 @@ const ROWS = [
 	{ label: "Bundle size", theirs: "~2 MB", ours: "16.8 KB", highlight: true },
 	{ label: "Dependencies", theirs: "50+", ours: "Zero", highlight: true },
 	{ label: "API", theirs: "Async", ours: "Sync", highlight: false },
-	{ label: "Output", theirs: "SVG string", ours: "SVG + DOM + Terminal", highlight: false },
-	{ label: "Interactivity", theirs: "None", ours: "Zoom, pan, keyboard, search", highlight: false },
-	{ label: "Playability", theirs: "None", ours: "Step-through animation", highlight: false },
+	{ label: "Output", theirs: "SVG string", ours: "SVG + DOM + Terminal", highlight: false, link: "#samples" },
+	{ label: "Interactivity", theirs: "None", ours: "Zoom, pan, keyboard, search", highlight: false, link: "#interactive-demo" },
+	{ label: "Playability", theirs: "None", ours: "Step-through animation", highlight: false, link: "#samples" },
 	{ label: "Themes", theirs: "1", ours: "32", highlight: true },
 	{ label: "Extensibility", theirs: "Limited", ours: "Plugin system", highlight: false },
 ];
@@ -38,7 +38,11 @@ export function Comparison() {
 							<div className="px-5 py-3.5 text-[var(--text-secondary)]">{row.label}</div>
 							<div className="px-5 py-3.5 text-center text-[var(--text-muted)] font-mono">{row.theirs}</div>
 							<div className={`px-5 py-3.5 text-center font-mono font-medium ${row.highlight ? "text-[var(--accent-green)]" : "text-[var(--text-primary)]"}`}>
-								{row.ours}
+								{row.link ? (
+									<a href={row.link} className="underline decoration-dotted underline-offset-4 hover:text-[var(--accent-cyan)] transition-colors">
+										{row.ours}
+									</a>
+								) : row.ours}
 							</div>
 						</div>
 					))}

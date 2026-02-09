@@ -1,6 +1,7 @@
 import { Hero } from "@/components/hero";
 import { Comparison } from "@/components/comparison";
 import { Playground } from "@/components/playground";
+import { InteractiveDemo } from "@/components/interactive-demo";
 import { Features } from "@/components/features";
 import { Architecture } from "@/components/architecture";
 import { CodeExamples } from "@/components/code-examples";
@@ -17,6 +18,7 @@ export default function Home() {
 				<Hero />
 				<Comparison />
 				<Playground />
+				<InteractiveDemo />
 				<Features />
 				<Architecture />
 				<CodeExamples />
