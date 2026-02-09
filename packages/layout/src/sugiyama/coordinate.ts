@@ -206,6 +206,69 @@ function alignChains<N, E>(
 	return aligned;
 }
 
+function centerSubtrees<N, E>(
+	graph: DirectedGraph<N, E>,
+	layerArrays: string[][],
+	positions: Map<string, number>,
+	nodeSpacing: number,
+	isHoriz: boolean,
+): Map<string, number> {
+	const centered = new Map(positions);
+
+	for (let iter = 0; iter < 4; iter++) {
+		for (let li = 0; li < layerArrays.length; li++) {
+			const layer = layerArrays[li];
+
+			for (const nodeId of layer) {
+				const succs = graph.successors(nodeId);
+				if (succs.length < 2) continue;
+
+				const nextLayer = layerArrays[li + 1];
+				if (!nextLayer) continue;
+				const childrenInNextLayer = succs.filter((s) => nextLayer.includes(s));
+				if (childrenInNextLayer.length < 2) continue;
+
+				const parentPos = centered.get(nodeId)!;
+				const childPositions = childrenInNextLayer.map((c) => centered.get(c)!);
+				const childCenter = (Math.min(...childPositions) + Math.max(...childPositions)) / 2;
+				const shift = parentPos - childCenter;
+
+				if (Math.abs(shift) < 1) continue;
+
+				for (const child of childrenInNextLayer) {
+					centered.set(child, centered.get(child)! + shift);
+				}
+			}
+		}
+
+		for (const layer of layerArrays) {
+			const sorted = layer
+				.map((nodeId) => ({
+					nodeId,
+					pos: centered.get(nodeId)!,
+				}))
+				.sort((a, b) => a.pos - b.pos);
+
+			for (let i = 1; i < sorted.length; i++) {
+				const prevNode = graph.getNode(sorted[i - 1].nodeId);
+				const currNode = graph.getNode(sorted[i].nodeId);
+				if (!prevNode || !currNode) continue;
+
+				const prevSize = isHoriz ? prevNode.height : prevNode.width;
+				const currSize = isHoriz ? currNode.height : currNode.width;
+				const minPos = sorted[i - 1].pos + prevSize / 2 + nodeSpacing + currSize / 2;
+
+				if (sorted[i].pos < minPos) {
+					sorted[i].pos = minPos;
+					centered.set(sorted[i].nodeId, minPos);
+				}
+			}
+		}
+	}
+
+	return centered;
+}
+
 function normalizePositions(
 	positions: Map<string, number>,
 	padding: number,
@@ -261,7 +324,15 @@ export function assignCoordinates<N, E>(
 		isHoriz,
 	);
 
-	const normalizedPositions = normalizePositions(chainAligned, padding);
+	const subtreeCentered = centerSubtrees(
+		graph,
+		layerArrays,
+		chainAligned,
+		nodeSpacing,
+		isHoriz,
+	);
+
+	const normalizedPositions = normalizePositions(subtreeCentered, padding);
 
 	const positions = new Map<string, { x: number; y: number }>();
 

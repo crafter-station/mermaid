@@ -14,11 +14,11 @@ export function layoutSequenceDiagram(
 ): PositionedGraph {
 	const padding = options.padding ?? 20;
 	const nodeSpacing = options.nodeSpacing ?? 60;
-	const layerSpacing = options.layerSpacing ?? 50;
+	const layerSpacing = options.layerSpacing ?? 30;
 
 	const participants = ast.participants;
 	const columnWidth = 120;
-	const actorHeight = 60;
+	const actorHeight = 40;
 
 	const positionedNodes: PositionedNode[] = [];
 	const columnPositions = new Map<string, number>();
