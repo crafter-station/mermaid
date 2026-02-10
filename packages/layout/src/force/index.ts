@@ -18,10 +18,31 @@ interface ForceNode {
 	vy: number;
 	width: number;
 	height: number;
+	inlineStyle?: Record<string, string>;
+}
+
+function clipToRect(cx: number, cy: number, w: number, h: number, targetX: number, targetY: number): Point {
+	const dx = targetX - cx;
+	const dy = targetY - cy;
+	if (dx === 0 && dy === 0) return { x: cx, y: cy };
+
+	const hw = w / 2;
+	const hh = h / 2;
+	const absDx = Math.abs(dx);
+	const absDy = Math.abs(dy);
+
+	let t: number;
+	if (absDx * hh > absDy * hw) {
+		t = hw / absDx;
+	} else {
+		t = hh / absDy;
+	}
+
+	return { x: cx + dx * t, y: cy + dy * t };
 }
 
 export function forceLayout(
-	nodes: Array<{ id: string; label: string; shape: string }>,
+	nodes: Array<{ id: string; label: string; shape: string; inlineStyle?: Record<string, string> }>,
 	edges: Array<{
 		source: string;
 		target: string;
@@ -29,6 +50,7 @@ export function forceLayout(
 		style: string;
 		hasArrowStart: boolean;
 		hasArrowEnd: boolean;
+		inlineStyle?: Record<string, string>;
 	}>,
 	options: LayoutOptions,
 ): PositionedGraph {
@@ -49,14 +71,16 @@ export function forceLayout(
 			vy: 0,
 			width: size.width,
 			height: size.height,
+			inlineStyle: n.inlineStyle,
 		};
 	});
 
 	const nodeMap = new Map(forceNodes.map((n) => [n.id, n]));
-	const iterations = 100;
-	const repulsionStrength = 5000;
-	const attractionStrength = 0.01;
-	const damping = 0.9;
+	const iterations = 150;
+	const repulsionStrength = 8000;
+	const attractionStrength = 0.008;
+	const damping = 0.85;
+	const overlapPadding = 20;
 
 	for (let iter = 0; iter < iterations; iter++) {
 		for (let i = 0; i < forceNodes.length; i++) {
@@ -66,9 +90,13 @@ export function forceLayout(
 				const dx = b.x - a.x;
 				const dy = b.y - a.y;
 				const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-				const force = repulsionStrength / (dist * dist);
-				const fx = (dx / dist) * force;
-				const fy = (dy / dist) * force;
+				const minDist = (a.width + b.width) / 2 + overlapPadding;
+				const effectiveDist = Math.max(dist, 1);
+				const force = repulsionStrength / (effectiveDist * effectiveDist);
+				const overlapForce = dist < minDist ? (minDist - dist) * 0.5 : 0;
+				const totalForce = force + overlapForce;
+				const fx = (dx / dist) * totalForce;
+				const fy = (dy / dist) * totalForce;
 				a.vx -= fx;
 				a.vy -= fy;
 				b.vx += fx;
@@ -83,7 +111,8 @@ export function forceLayout(
 			const dx = target.x - source.x;
 			const dy = target.y - source.y;
 			const dist = Math.sqrt(dx * dx + dy * dy);
-			const force = (dist - nodeSpacing) * attractionStrength;
+			const idealDist = (source.width + target.width) / 2 + nodeSpacing;
+			const force = (dist - idealDist) * attractionStrength;
 			const fx = (dx / Math.max(dist, 1)) * force;
 			const fy = (dy / Math.max(dist, 1)) * force;
 			source.vx += fx;
@@ -122,6 +151,7 @@ export function forceLayout(
 		y: n.y - n.height / 2 + shiftY,
 		width: n.width,
 		height: n.height,
+		inlineStyle: n.inlineStyle,
 	}));
 
 	const posNodeMap = new Map(positionedNodes.map((n) => [n.id, n]));
@@ -138,18 +168,18 @@ export function forceLayout(
 				hasArrowStart: edge.hasArrowStart,
 				hasArrowEnd: edge.hasArrowEnd,
 				points: [],
+				inlineStyle: edge.inlineStyle,
 			};
 		}
 
+		const srcCx = source.x + source.width / 2;
+		const srcCy = source.y + source.height / 2;
+		const tgtCx = target.x + target.width / 2;
+		const tgtCy = target.y + target.height / 2;
+
 		const points: Point[] = [
-			{
-				x: source.x + source.width / 2,
-				y: source.y + source.height / 2,
-			},
-			{
-				x: target.x + target.width / 2,
-				y: target.y + target.height / 2,
-			},
+			clipToRect(srcCx, srcCy, source.width, source.height, tgtCx, tgtCy),
+			clipToRect(tgtCx, tgtCy, target.width, target.height, srcCx, srcCy),
 		];
 
 		return {
@@ -161,6 +191,7 @@ export function forceLayout(
 			hasArrowEnd: edge.hasArrowEnd,
 			points,
 			labelPosition: edge.label ? computeLabelPosition(points) : undefined,
+			inlineStyle: edge.inlineStyle,
 		};
 	});
 

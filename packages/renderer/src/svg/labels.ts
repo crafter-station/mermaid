@@ -39,6 +39,14 @@ export function renderNodeLabel(node: PositionedNode, ctx: RenderContext): strin
 		return sideLabel + barLabel;
 	}
 
+	if (node.shape === "class-box") {
+		return renderClassBoxLabel(node, ctx);
+	}
+
+	if (node.shape === "er-entity") {
+		return renderEREntityLabel(node, ctx);
+	}
+
 	const lines = splitLabel(node.label);
 	const cx = node.x + node.width / 2;
 	const cy = node.y + node.height / 2;
@@ -54,6 +62,49 @@ export function renderNodeLabel(node: PositionedNode, ctx: RenderContext): strin
 		.join("");
 
 	return `<text fill="var(--_text)" font-family="${ctx.font}" font-size="14" font-weight="400">${tspans}</text>`;
+}
+
+function renderClassBoxLabel(node: PositionedNode, ctx: RenderContext): string {
+	const parts = node.label.split("\n");
+	const lineHeight = 16;
+	const padding = 12;
+	const x = node.x;
+	const cx = node.x + node.width / 2;
+	let currentY = node.y;
+
+	let svg = "";
+
+	let idx = 0;
+	const className = parts[idx] || "";
+	currentY += padding / 2 + lineHeight / 2;
+	svg += `<text x="${cx}" y="${currentY}" text-anchor="middle" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="14" font-weight="600">${escapeXml(className)}</text>`;
+	idx++;
+
+	if (idx < parts.length && parts[idx] === "---") {
+		idx++;
+		currentY = node.y + lineHeight + padding;
+
+		while (idx < parts.length && parts[idx] !== "---") {
+			currentY += lineHeight * 0.8;
+			svg += `<text x="${x + padding}" y="${currentY}" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="12" font-weight="400">${escapeXml(parts[idx])}</text>`;
+			idx++;
+		}
+	}
+
+	if (idx < parts.length && parts[idx] === "---") {
+		idx++;
+		const attrCount = parseInt(node.inlineStyle?.attrCount || "0");
+		const attrHeight = attrCount > 0 ? attrCount * lineHeight + padding : 0;
+		currentY = node.y + lineHeight + padding + attrHeight;
+
+		while (idx < parts.length) {
+			currentY += lineHeight * 0.8;
+			svg += `<text x="${x + padding}" y="${currentY}" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="12" font-weight="400">${escapeXml(parts[idx])}</text>`;
+			idx++;
+		}
+	}
+
+	return svg;
 }
 
 export function renderEdgeLabel(edge: PositionedEdge, ctx: RenderContext): string {
@@ -99,6 +150,56 @@ export function renderGroupLabel(group: PositionedGroup, ctx: RenderContext): st
 		.join("");
 
 	return `<text fill="var(--_group-text)" font-family="${ctx.font}" font-size="12" font-weight="600">${tspans}</text>`;
+}
+
+function renderEREntityLabel(node: PositionedNode, ctx: RenderContext): string {
+	const parts = node.label.split("\n");
+	const x = node.x;
+	const w = node.width;
+	const cx = x + w / 2;
+	const fontSize = 14;
+	const attrFontSize = 12;
+	const headerH = fontSize * 1.2 + 16;
+
+	let svg = "";
+
+	const entityName = parts[0] || "";
+	const nameY = node.y + headerH / 2;
+	svg += `<text x="${cx}" y="${nameY}" text-anchor="middle" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="${fontSize}" font-weight="600">${escapeXml(entityName)}</text>`;
+
+	let idx = 1;
+	if (idx < parts.length && parts[idx] === "---") {
+		idx++;
+		const attrStartY = node.y + headerH + 8;
+		const lineH = attrFontSize * 1.4;
+
+		let attrIdx = 0;
+		while (idx < parts.length && parts[idx] !== "---") {
+			const attrLine = parts[idx] || "";
+			const attrY = attrStartY + attrIdx * lineH + attrFontSize / 2;
+
+			const keyMatch = attrLine.match(/^(PK|FK|UK|PK,FK|FK,PK)\s+/);
+			if (keyMatch) {
+				const keyText = keyMatch[1]!;
+				const rest = attrLine.slice(keyMatch[0].length);
+				svg += `<text x="${x + 8}" y="${attrY}" dominant-baseline="middle" fill="var(--_node-stroke)" font-family="${ctx.font}" font-size="10" font-weight="600">${escapeXml(keyText)}</text>`;
+				svg += `<text x="${x + 34}" y="${attrY}" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="${attrFontSize}" font-weight="400">${escapeXml(rest)}</text>`;
+			} else {
+				svg += `<text x="${x + 34}" y="${attrY}" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="${attrFontSize}" font-weight="400">${escapeXml(attrLine)}</text>`;
+			}
+
+			attrIdx++;
+			idx++;
+		}
+	}
+
+	const attrCount = parseInt(node.inlineStyle?.attrCount || "0");
+	if (attrCount === 0) {
+		const noAttrY = node.y + headerH + 10;
+		svg += `<text x="${cx}" y="${noAttrY}" text-anchor="middle" dominant-baseline="middle" fill="var(--_muted)" font-family="${ctx.font}" font-size="11" font-style="italic">(no attributes)</text>`;
+	}
+
+	return svg;
 }
 
 function escapeXml(text: string): string {

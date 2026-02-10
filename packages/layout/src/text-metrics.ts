@@ -71,6 +71,30 @@ export function estimateNodeSize(
 			height = textHeight + 24;
 			break;
 		}
+		case "class-box": {
+			width = maxLineWidth + 32;
+			height = textHeight + 24;
+			break;
+		}
+		case "er-entity": {
+			const entityLines = label.split("\n");
+			const hasAttrs = entityLines.includes("---");
+			const headerH = fontSize * 1.2 + 16;
+			if (hasAttrs) {
+				const attrLines = entityLines.filter((l) => l !== "---" && l !== entityLines[0]);
+				const nameWidth = estimateTextWidth(entityLines[0] || "", fontSize, 600);
+				const attrWidths = attrLines.map((l) => estimateTextWidth(l, fontSize - 2));
+				const maxAttrWidth = attrWidths.length > 0 ? Math.max(...attrWidths) : 0;
+				width = Math.max(nameWidth, maxAttrWidth) + 48;
+				const attrsH = attrLines.length * (fontSize - 2) * 1.4 + 12;
+				height = headerH + attrsH;
+			} else {
+				const nameWidth = estimateTextWidth(entityLines[0] || "", fontSize, 600);
+				width = Math.max(nameWidth + 40, 120);
+				height = headerH + 24;
+			}
+			break;
+		}
 		case "rect":
 		case "rectangle":
 		case "rounded":

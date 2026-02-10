@@ -294,41 +294,84 @@ const SAMPLES: Sample[] = [
 		description: "Users and orders with one-to-many relationship.",
 		category: "er",
 		source: `erDiagram
+  USER {
+    int id PK
+    string name
+    string email UK
+  }
+  ORDER {
+    int id PK
+    int user_id FK
+    date created_at
+  }
   USER ||--o{ ORDER : places
-  ORDER ||--|{ LINE_ITEM : contains
-  LINE_ITEM }o--|| PRODUCT : references`,
+  ORDER ||--|{ LINE_ITEM : contains`,
 	},
 	{
 		title: "Cardinality Types",
 		description: "All ER diagram cardinality types: one, many, zero-or-one, zero-or-more.",
 		category: "er",
 		source: `erDiagram
+  PERSON {
+    int id PK
+    string name
+  }
+  ADDRESS {
+    int id PK
+    string street
+    string city
+  }
+  PASSPORT {
+    int id PK
+    string number UK
+  }
   PERSON ||--o{ ADDRESS : lives_at
-  PERSON ||--|| PASSPORT : has
-  COMPANY ||--o{ EMPLOYEE : employs
-  EMPLOYEE }o--o{ PROJECT : works_on`,
+  PERSON ||--|| PASSPORT : has`,
 	},
 	{
 		title: "E-Commerce Schema",
 		description: "Complete e-commerce data model with customers, orders, and products.",
 		category: "er",
 		source: `erDiagram
+  CUSTOMER {
+    int id PK
+    string name
+    string email UK
+  }
+  ORDER {
+    int id PK
+    int customer_id FK
+    date created_at
+    float total
+  }
+  PRODUCT {
+    int id PK
+    string name
+    float price
+  }
   CUSTOMER ||--o{ ORDER : places
   ORDER ||--|{ ORDER_LINE : contains
-  ORDER_LINE }o--|| PRODUCT : references
-  PRODUCT }o--|| CATEGORY : belongs_to
-  CUSTOMER ||--o{ REVIEW : writes
-  REVIEW }o--|| PRODUCT : about`,
+  ORDER_LINE }o--|| PRODUCT : references`,
 	},
 	{
 		title: "Blog Schema",
 		description: "Blog platform with authors, posts, comments, and tags.",
 		category: "er",
 		source: `erDiagram
+  AUTHOR {
+    int id PK
+    string name
+    string bio
+  }
+  POST {
+    int id PK
+    int author_id FK
+    string title
+    date published_at
+  }
   AUTHOR ||--o{ POST : writes
   POST ||--o{ COMMENT : has
-  POST }o--o{ TAG : tagged_with
-  COMMENT }o--|| AUTHOR : written_by`,
+  POST }o--o{ TAG : tagged_with`,
 	},
 	{
 		title: "Basic State",

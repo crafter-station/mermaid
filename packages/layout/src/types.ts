@@ -23,6 +23,7 @@ export interface PositionedEdge {
 	hasArrowEnd: boolean;
 	points: Point[];
 	labelPosition?: Point;
+	inlineStyle?: Record<string, string>;
 }
 
 export interface PositionedGroup {

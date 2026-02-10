@@ -211,6 +211,52 @@ function ganttTitle(node: PositionedNode, _ctx: RenderContext): string {
 	return "";
 }
 
+function erEntity(node: PositionedNode, ctx: RenderContext): string {
+	const x = node.x;
+	const y = node.y;
+	const w = node.width;
+	const h = node.height;
+	const attrCount = parseInt(node.inlineStyle?.attrCount || "0");
+
+	let svg = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5" rx="0"/>`;
+
+	if (attrCount > 0) {
+		const headerH = 14 * 1.2 + 16;
+		const y1 = y + headerH;
+		svg += `<line x1="${x}" y1="${y1}" x2="${x + w}" y2="${y1}" stroke="var(--_node-stroke)" stroke-width="1"/>`;
+	}
+
+	return svg;
+}
+
+function classBox(node: PositionedNode, ctx: RenderContext): string {
+	const x = node.x;
+	const y = node.y;
+	const w = node.width;
+	const h = node.height;
+	const lineHeight = 16;
+	const padding = 12;
+	const attrCount = parseInt(node.inlineStyle?.attrCount || "0");
+	const methodCount = parseInt(node.inlineStyle?.methodCount || "0");
+
+	let svg = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5" rx="0"/>`;
+
+	const nameHeight = lineHeight + padding;
+	const attrHeight = attrCount > 0 ? attrCount * lineHeight + padding : 0;
+
+	if (attrCount > 0 || methodCount > 0) {
+		const y1 = y + nameHeight;
+		svg += `<line x1="${x}" y1="${y1}" x2="${x + w}" y2="${y1}" stroke="var(--_node-stroke)" stroke-width="1"/>`;
+	}
+
+	if (methodCount > 0 && attrCount > 0) {
+		const y2 = y + nameHeight + attrHeight;
+		svg += `<line x1="${x}" y1="${y2}" x2="${x + w}" y2="${y2}" stroke="var(--_node-stroke)" stroke-width="1"/>`;
+	}
+
+	return svg;
+}
+
 const SHAPE_RENDERERS: Record<string, ShapeRenderer> = {
 	rectangle,
 	rounded,
@@ -234,6 +280,8 @@ const SHAPE_RENDERERS: Record<string, ShapeRenderer> = {
 	"gantt-section": ganttSection,
 	"gantt-bar": ganttBar,
 	"gantt-title": ganttTitle,
+	"class-box": classBox,
+	"er-entity": erEntity,
 };
 
 export function renderShape(node: PositionedNode, ctx: RenderContext): string {
