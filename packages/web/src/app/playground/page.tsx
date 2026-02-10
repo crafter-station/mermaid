@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
+import { useQueryState, parseAsString } from "nuqs";
 import Script from "next/script";
 import { codeToHtml } from "shiki";
 import { useDiagramTheme, THEME_NAMES, type ThemeName } from "@/components/theme-context";
@@ -69,12 +70,25 @@ const PRESETS: { label: string; category: string; source: string }[] = [
 		label: "ER Diagram",
 		category: "er",
 		source: `erDiagram
+  CUSTOMER {
+    int id PK
+    string name
+    string email UK
+  }
+  ORDER {
+    int id PK
+    int customer_id FK
+    date created_at
+    float total
+  }
+  PRODUCT {
+    int id PK
+    string name
+    float price
+  }
   CUSTOMER ||--o{ ORDER : places
   ORDER ||--|{ LINE_ITEM : contains
-  LINE_ITEM }o--|| PRODUCT : references
-  PRODUCT }o--|| CATEGORY : belongs_to
-  CUSTOMER ||--o{ REVIEW : writes
-  REVIEW }o--|| PRODUCT : about`,
+  LINE_ITEM }o--|| PRODUCT : references`,
 	},
 	{
 		label: "State",
@@ -242,7 +256,9 @@ function renderAtStep(
 type OutputTab = "svg" | "ascii" | "code";
 
 export default function PlaygroundPage() {
-	const [source, setSource] = useState(PRESETS[0]!.source);
+	const [tab, setTab] = useQueryState("tab", parseAsString.withDefault(PRESETS[0]!.category));
+	const activePreset = PRESETS.find((p) => p.category === tab) || PRESETS[0]!;
+	const [source, setSource] = useState(activePreset.source);
 	const { themeName, setThemeName, getThemeObject } = useDiagramTheme();
 	const { resolvedTheme, setTheme } = useTheme();
 	const [error, setError] = useState<string | null>(null);
@@ -252,7 +268,7 @@ export default function PlaygroundPage() {
 	const svgRef = useRef<HTMLDivElement>(null);
 	const domSvgRef = useRef<SVGSVGElement | null>(null);
 
-	const [outputTab, setOutputTab] = useState<OutputTab>("svg");
+	const [outputTab, setOutputTab] = useQueryState("output", parseAsString.withDefault("svg") as ReturnType<typeof parseAsString.withDefault<OutputTab>>);
 	const [asciiHtml, setAsciiHtml] = useState("");
 	const [svgCode, setSvgCode] = useState("");
 
@@ -274,6 +290,13 @@ export default function PlaygroundPage() {
 	const highlightRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => setMounted(true), []);
+
+	useEffect(() => {
+		const preset = PRESETS.find((p) => p.category === tab);
+		if (preset && source !== preset.source) {
+			setSource(preset.source);
+		}
+	}, [tab]);
 
 	useEffect(() => {
 		codeToHtml(source, {
@@ -547,10 +570,10 @@ export default function PlaygroundPage() {
 				<div className="flex items-center gap-1 px-4 h-10 border-b border-[var(--border)] bg-[var(--bg-secondary)] shrink-0 overflow-x-auto">
 					{PRESETS.map((preset) => (
 						<button
-							key={preset.label}
-							onClick={() => { setSource(preset.source); setMode("edit"); }}
+							key={preset.category}
+							onClick={() => { setTab(preset.category); setSource(preset.source); setMode("edit"); }}
 							className={`px-2.5 py-1 rounded-md text-[11px] font-mono whitespace-nowrap transition-colors cursor-pointer ${
-								source === preset.source
+								tab === preset.category
 									? "bg-[var(--accent-blue)] text-white"
 									: "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]"
 							}`}
