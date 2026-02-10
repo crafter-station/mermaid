@@ -175,6 +175,18 @@ function drawNode(
 	const textColor = colors.text;
 
 	switch (node.shape) {
+		case "state-start": {
+			const cxs = Math.round(x + w / 2);
+			const cys = Math.round(y + h / 2);
+			canvas.set(cxs, cys, "\u25CF", nodeColor);
+			return;
+		}
+		case "state-end": {
+			const cxe = Math.round(x + w / 2);
+			const cye = Math.round(y + h / 2);
+			canvas.set(cxe, cye, "\u25C9", nodeColor);
+			return;
+		}
 		case "rounded":
 		case "stadium":
 			canvas.roundedBox(x, y, w, h, nodeColor);
