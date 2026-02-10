@@ -68,6 +68,39 @@ function assignWithinLayerPositions<N, E>(
 	return positions;
 }
 
+function resolveCollisions<N, E>(
+	graph: DirectedGraph<N, E>,
+	layerArrays: string[][],
+	positions: Map<string, number>,
+	nodeSpacing: number,
+	isHoriz: boolean,
+): void {
+	for (const layer of layerArrays) {
+		const sorted = layer
+			.map((nodeId) => ({
+				nodeId,
+				pos: positions.get(nodeId)!,
+			}))
+			.sort((a, b) => a.pos - b.pos);
+
+		for (let i = 1; i < sorted.length; i++) {
+			const prevNode = graph.getNode(sorted[i - 1].nodeId);
+			const currNode = graph.getNode(sorted[i].nodeId);
+			if (!prevNode || !currNode) continue;
+
+			const prevSize = isHoriz ? prevNode.height : prevNode.width;
+			const currSize = isHoriz ? currNode.height : currNode.width;
+			const minPos =
+				sorted[i - 1].pos + prevSize / 2 + nodeSpacing + currSize / 2;
+
+			if (sorted[i].pos < minPos) {
+				sorted[i].pos = minPos;
+				positions.set(sorted[i].nodeId, minPos);
+			}
+		}
+	}
+}
+
 function refinePositions<N, E>(
 	graph: DirectedGraph<N, E>,
 	layerArrays: string[][],
@@ -78,6 +111,8 @@ function refinePositions<N, E>(
 	const positions = new Map(layerPositions);
 	const iterations = 24;
 	const damping = 0.5;
+	const isVirtual = (id: string) => id.startsWith("__virtual_");
+	const virtualWeight = 0.2;
 
 	for (let iter = 0; iter < iterations; iter++) {
 		const newPositions = new Map<string, number>();
@@ -94,41 +129,24 @@ function refinePositions<N, E>(
 					continue;
 				}
 
-				const avgNeighborPos =
-					neighbors.reduce((sum, n) => sum + (positions.get(n) ?? 0), 0) /
-					neighbors.length;
+				let weightedSum = 0;
+				let totalWeight = 0;
+				for (const n of neighbors) {
+					const w = isVirtual(n) && !isVirtual(nodeId) ? virtualWeight : 1;
+					weightedSum += (positions.get(n) ?? 0) * w;
+					totalWeight += w;
+				}
+				const avgNeighborPos = weightedSum / totalWeight;
 
 				const currentPos = positions.get(nodeId)!;
-				const targetPos = currentPos + (avgNeighborPos - currentPos) * damping;
+				const targetPos =
+					currentPos + (avgNeighborPos - currentPos) * damping;
 
 				newPositions.set(nodeId, targetPos);
 			}
 		}
 
-		for (const layer of layerArrays) {
-			const sorted = layer
-				.map((nodeId) => ({
-					nodeId,
-					pos: newPositions.get(nodeId)!,
-				}))
-				.sort((a, b) => a.pos - b.pos);
-
-			for (let i = 1; i < sorted.length; i++) {
-				const prevNode = graph.getNode(sorted[i - 1].nodeId);
-				const currNode = graph.getNode(sorted[i].nodeId);
-				if (!prevNode || !currNode) continue;
-
-				const prevSize = isHoriz ? prevNode.height : prevNode.width;
-				const currSize = isHoriz ? currNode.height : currNode.width;
-
-				const minPos = sorted[i - 1].pos + prevSize / 2 + nodeSpacing + currSize / 2;
-
-				if (sorted[i].pos < minPos) {
-					sorted[i].pos = minPos;
-					newPositions.set(sorted[i].nodeId, minPos);
-				}
-			}
-		}
+		resolveCollisions(graph, layerArrays, newPositions, nodeSpacing, isHoriz);
 
 		positions.clear();
 		for (const [nodeId, pos] of newPositions) {
@@ -178,29 +196,7 @@ function alignChains<N, E>(
 			}
 		}
 
-		for (const layer of layerArrays) {
-			const sorted = layer
-				.map((nodeId) => ({
-					nodeId,
-					pos: aligned.get(nodeId)!,
-				}))
-				.sort((a, b) => a.pos - b.pos);
-
-			for (let i = 1; i < sorted.length; i++) {
-				const prevNode = graph.getNode(sorted[i - 1].nodeId);
-				const currNode = graph.getNode(sorted[i].nodeId);
-				if (!prevNode || !currNode) continue;
-
-				const prevSize = isHoriz ? prevNode.height : prevNode.width;
-				const currSize = isHoriz ? currNode.height : currNode.width;
-				const minPos = sorted[i - 1].pos + prevSize / 2 + nodeSpacing + currSize / 2;
-
-				if (sorted[i].pos < minPos) {
-					sorted[i].pos = minPos;
-					aligned.set(sorted[i].nodeId, minPos);
-				}
-			}
-		}
+		resolveCollisions(graph, layerArrays, aligned, nodeSpacing, isHoriz);
 	}
 
 	return aligned;
@@ -214,59 +210,189 @@ function centerSubtrees<N, E>(
 	isHoriz: boolean,
 ): Map<string, number> {
 	const centered = new Map(positions);
+	const isVirtual = (id: string) => id.startsWith("__virtual_");
 
-	for (let iter = 0; iter < 4; iter++) {
+	for (let iter = 0; iter < 8; iter++) {
+		const isDownward = iter % 2 === 0;
+
+		if (isDownward) {
+			for (let li = 0; li < layerArrays.length; li++) {
+				const layer = layerArrays[li];
+
+				for (const nodeId of layer) {
+					const succs = graph.successors(nodeId);
+					if (succs.length < 2) continue;
+
+					const nextLayer = layerArrays[li + 1];
+					if (!nextLayer) continue;
+					const childrenInNextLayer = succs.filter((s) =>
+						nextLayer.includes(s),
+					);
+					if (childrenInNextLayer.length < 2) continue;
+
+					const realChildren = childrenInNextLayer.filter(
+						(c) => !isVirtual(c),
+					);
+					const centerTargets =
+						realChildren.length >= 2
+							? realChildren
+							: childrenInNextLayer;
+
+					const parentPos = centered.get(nodeId)!;
+					const childPositions = centerTargets.map(
+						(c) => centered.get(c)!,
+					);
+					const childCenter =
+						(Math.min(...childPositions) +
+							Math.max(...childPositions)) /
+						2;
+					const shift = parentPos - childCenter;
+
+					if (Math.abs(shift) < 1) continue;
+
+					for (const child of childrenInNextLayer) {
+						centered.set(child, centered.get(child)! + shift);
+					}
+				}
+			}
+		} else {
+			for (let li = layerArrays.length - 1; li >= 0; li--) {
+				const layer = layerArrays[li];
+
+				for (const nodeId of layer) {
+					if (isVirtual(nodeId)) continue;
+
+					const preds = graph.predecessors(nodeId);
+					if (preds.length < 2) continue;
+
+					const prevLayer = layerArrays[li - 1];
+					if (!prevLayer) continue;
+					const parentsInPrevLayer = preds.filter((p) =>
+						prevLayer.includes(p),
+					);
+
+					const realParents = parentsInPrevLayer.filter(
+						(p) => !isVirtual(p),
+					);
+					const centerTargets =
+						realParents.length >= 2
+							? realParents
+							: parentsInPrevLayer;
+					if (centerTargets.length < 2) continue;
+
+					const parentPositions = centerTargets.map(
+						(p) => centered.get(p)!,
+					);
+					const parentCenter =
+						(Math.min(...parentPositions) +
+							Math.max(...parentPositions)) /
+						2;
+
+					centered.set(nodeId, parentCenter);
+				}
+			}
+		}
+
+		resolveCollisions(graph, layerArrays, centered, nodeSpacing, isHoriz);
+	}
+
+	return centered;
+}
+
+function balanceGraph<N, E>(
+	graph: DirectedGraph<N, E>,
+	layerArrays: string[][],
+	positions: Map<string, number>,
+	nodeSpacing: number,
+	isHoriz: boolean,
+): Map<string, number> {
+	const result = new Map(positions);
+	const isVirtual = (id: string) => id.startsWith("__virtual_");
+
+	for (let iter = 0; iter < 8; iter++) {
 		for (let li = 0; li < layerArrays.length; li++) {
 			const layer = layerArrays[li];
 
 			for (const nodeId of layer) {
+				if (isVirtual(nodeId)) continue;
+
 				const succs = graph.successors(nodeId);
-				if (succs.length < 2) continue;
+				const realSuccs = succs.filter(
+					(s) =>
+						!isVirtual(s) &&
+						layerArrays[li + 1]?.includes(s),
+				);
 
-				const nextLayer = layerArrays[li + 1];
-				if (!nextLayer) continue;
-				const childrenInNextLayer = succs.filter((s) => nextLayer.includes(s));
-				if (childrenInNextLayer.length < 2) continue;
+				if (realSuccs.length >= 2) {
+					const parentPos = result.get(nodeId)!;
+					const childPositions = realSuccs.map(
+						(c) => result.get(c)!,
+					);
+					const childCenter =
+						(Math.min(...childPositions) +
+							Math.max(...childPositions)) /
+						2;
+					const shift = parentPos - childCenter;
 
-				const parentPos = centered.get(nodeId)!;
-				const childPositions = childrenInNextLayer.map((c) => centered.get(c)!);
-				const childCenter = (Math.min(...childPositions) + Math.max(...childPositions)) / 2;
-				const shift = parentPos - childCenter;
-
-				if (Math.abs(shift) < 1) continue;
-
-				for (const child of childrenInNextLayer) {
-					centered.set(child, centered.get(child)! + shift);
+					if (Math.abs(shift) > 1) {
+						for (const child of realSuccs) {
+							result.set(child, result.get(child)! + shift);
+						}
+					}
 				}
 			}
 		}
 
-		for (const layer of layerArrays) {
-			const sorted = layer
-				.map((nodeId) => ({
-					nodeId,
-					pos: centered.get(nodeId)!,
-				}))
-				.sort((a, b) => a.pos - b.pos);
+		for (let li = layerArrays.length - 1; li >= 0; li--) {
+			const layer = layerArrays[li];
 
-			for (let i = 1; i < sorted.length; i++) {
-				const prevNode = graph.getNode(sorted[i - 1].nodeId);
-				const currNode = graph.getNode(sorted[i].nodeId);
-				if (!prevNode || !currNode) continue;
+			for (const nodeId of layer) {
+				if (isVirtual(nodeId)) continue;
 
-				const prevSize = isHoriz ? prevNode.height : prevNode.width;
-				const currSize = isHoriz ? currNode.height : currNode.width;
-				const minPos = sorted[i - 1].pos + prevSize / 2 + nodeSpacing + currSize / 2;
+				const preds = graph.predecessors(nodeId);
+				const realPreds = preds.filter(
+					(p) =>
+						!isVirtual(p) &&
+						layerArrays[li - 1]?.includes(p),
+				);
 
-				if (sorted[i].pos < minPos) {
-					sorted[i].pos = minPos;
-					centered.set(sorted[i].nodeId, minPos);
+				if (realPreds.length >= 2) {
+					const parentPositions = realPreds.map(
+						(p) => result.get(p)!,
+					);
+					const parentCenter =
+						(Math.min(...parentPositions) +
+							Math.max(...parentPositions)) /
+						2;
+					result.set(nodeId, parentCenter);
+				}
+
+				if (layer.length === 1) {
+					const allPreds = preds.filter((p) => !isVirtual(p));
+					const allSuccs = graph
+						.successors(nodeId)
+						.filter((s) => !isVirtual(s));
+					const connected = [...allPreds, ...allSuccs];
+					if (connected.length > 0) {
+						const avg =
+							connected.reduce(
+								(sum, n) => sum + (result.get(n) ?? 0),
+								0,
+							) / connected.length;
+						const current = result.get(nodeId)!;
+						result.set(
+							nodeId,
+							current + (avg - current) * 0.5,
+						);
+					}
 				}
 			}
 		}
+
+		resolveCollisions(graph, layerArrays, result, nodeSpacing, isHoriz);
 	}
 
-	return centered;
+	return result;
 }
 
 function normalizePositions(
@@ -332,7 +458,15 @@ export function assignCoordinates<N, E>(
 		isHoriz,
 	);
 
-	const normalizedPositions = normalizePositions(subtreeCentered, padding);
+	const finalPositions = balanceGraph(
+		graph,
+		layerArrays,
+		subtreeCentered,
+		nodeSpacing,
+		isHoriz,
+	);
+
+	const normalizedPositions = normalizePositions(finalPositions, padding);
 
 	const positions = new Map<string, { x: number; y: number }>();
 
@@ -352,14 +486,24 @@ export function assignCoordinates<N, E>(
 
 	if (direction === "BT" || direction === "RL") {
 		const maxCoord = isHoriz
-			? Math.max(...Array.from(positions.values()).map((p) => p.x))
-			: Math.max(...Array.from(positions.values()).map((p) => p.y));
+			? Math.max(
+					...Array.from(positions.values()).map((p) => p.x),
+				)
+			: Math.max(
+					...Array.from(positions.values()).map((p) => p.y),
+				);
 
 		for (const [nodeId, pos] of positions) {
 			if (isHoriz) {
-				positions.set(nodeId, { x: maxCoord - pos.x + 2 * padding, y: pos.y });
+				positions.set(nodeId, {
+					x: maxCoord - pos.x + 2 * padding,
+					y: pos.y,
+				});
 			} else {
-				positions.set(nodeId, { x: pos.x, y: maxCoord - pos.y + 2 * padding });
+				positions.set(nodeId, {
+					x: pos.x,
+					y: maxCoord - pos.y + 2 * padding,
+				});
 			}
 		}
 	}
