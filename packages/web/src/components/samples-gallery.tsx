@@ -413,6 +413,24 @@ const SAMPLES: Sample[] = [
   Cancelled --> [*]`,
 	},
 	{
+		title: "Composite States",
+		description: "Nested composite state with inner transitions.",
+		category: "state",
+		source: `stateDiagram-v2
+  [*] --> Idle
+  Idle --> Processing : submit
+  state Processing {
+    [*] --> Validate
+    Validate --> Transform : valid
+    Transform --> Save : done
+    Save --> [*]
+  }
+  Processing --> Success : complete
+  Processing --> Error : fail
+  Error --> Idle : retry
+  Success --> [*]`,
+	},
+	{
 		title: "Language Distribution",
 		description: "Pie chart showing programming language usage percentages.",
 		category: "pie",

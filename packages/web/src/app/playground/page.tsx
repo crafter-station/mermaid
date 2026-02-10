@@ -95,13 +95,17 @@ const PRESETS: { label: string; category: string; source: string }[] = [
 		category: "state",
 		source: `stateDiagram-v2
   [*] --> Idle
-  Idle --> Loading : fetch
-  Loading --> Success : resolve
-  Loading --> Error : reject
-  Success --> Idle : reset
-  Error --> Loading : retry
-  Error --> Idle : dismiss
-  Success --> [*]`,
+  Idle --> Processing : submit
+  state Processing {
+    [*] --> Parse
+    Parse --> Validate
+    Validate --> Execute
+    Execute --> [*]
+  }
+  Processing --> Complete : done
+  Processing --> Error : fail
+  Error --> Idle : retry
+  Complete --> [*]`,
 	},
 	{
 		label: "Pie Chart",
