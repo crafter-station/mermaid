@@ -605,6 +605,10 @@ function renderClassBoxLabelDOM(node: PositionedNode, ctx: RenderContext): SVGEl
 }
 
 function renderNodeLabel(node: PositionedNode, ctx: RenderContext): SVGElement {
+	if (node.shape === "state-start" || node.shape === "state-end") {
+		return createElement("g");
+	}
+
 	if (node.shape === "class-box") {
 		return renderClassBoxLabelDOM(node, ctx);
 	}

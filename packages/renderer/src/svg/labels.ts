@@ -6,6 +6,10 @@ function splitLabel(label: string): string[] {
 }
 
 export function renderNodeLabel(node: PositionedNode, ctx: RenderContext): string {
+	if (node.shape === "state-start" || node.shape === "state-end") {
+		return "";
+	}
+
 	if (node.shape === "pie-slice") {
 		const cx = node.x + node.width / 2;
 		const cy = node.y + node.height / 2;
