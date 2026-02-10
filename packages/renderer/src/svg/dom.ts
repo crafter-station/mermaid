@@ -323,6 +323,80 @@ function renderNodeShape(node: PositionedNode, _ctx: RenderContext): SVGElement 
 			return circle;
 		}
 
+		case "er-entity": {
+			const g = createElement("g");
+			const outerRect = createElement("rect");
+			outerRect.setAttribute("x", String(x));
+			outerRect.setAttribute("y", String(y));
+			outerRect.setAttribute("width", String(w));
+			outerRect.setAttribute("height", String(h));
+			outerRect.setAttribute("fill", "var(--_node-fill)");
+			outerRect.setAttribute("stroke", "var(--_node-stroke)");
+			outerRect.setAttribute("stroke-width", "1.5");
+			outerRect.setAttribute("rx", "0");
+			g.appendChild(outerRect);
+
+			const erAttrCount = parseInt(node.inlineStyle?.attrCount || "0");
+			if (erAttrCount > 0) {
+				const erHeaderH = 14 * 1.2 + 16;
+				const divider = createElement("line");
+				divider.setAttribute("x1", String(x));
+				divider.setAttribute("y1", String(y + erHeaderH));
+				divider.setAttribute("x2", String(x + w));
+				divider.setAttribute("y2", String(y + erHeaderH));
+				divider.setAttribute("stroke", "var(--_node-stroke)");
+				divider.setAttribute("stroke-width", "1");
+				g.appendChild(divider);
+			}
+
+			return g;
+		}
+
+		case "class-box": {
+			const g = createElement("g");
+			const outerRect = createElement("rect");
+			outerRect.setAttribute("x", String(x));
+			outerRect.setAttribute("y", String(y));
+			outerRect.setAttribute("width", String(w));
+			outerRect.setAttribute("height", String(h));
+			outerRect.setAttribute("fill", "var(--_node-fill)");
+			outerRect.setAttribute("stroke", "var(--_node-stroke)");
+			outerRect.setAttribute("stroke-width", "1.5");
+			outerRect.setAttribute("rx", "0");
+			g.appendChild(outerRect);
+
+			const lineHeight = 16;
+			const padding = 12;
+			const attrCount = parseInt(node.inlineStyle?.attrCount || "0");
+			const methodCount = parseInt(node.inlineStyle?.methodCount || "0");
+			const nameHeight = lineHeight + padding;
+			const attrHeight = attrCount > 0 ? attrCount * lineHeight + padding : 0;
+
+			if (attrCount > 0 || methodCount > 0) {
+				const line1 = createElement("line");
+				line1.setAttribute("x1", String(x));
+				line1.setAttribute("y1", String(y + nameHeight));
+				line1.setAttribute("x2", String(x + w));
+				line1.setAttribute("y2", String(y + nameHeight));
+				line1.setAttribute("stroke", "var(--_node-stroke)");
+				line1.setAttribute("stroke-width", "1");
+				g.appendChild(line1);
+			}
+
+			if (methodCount > 0 && attrCount > 0) {
+				const line2 = createElement("line");
+				line2.setAttribute("x1", String(x));
+				line2.setAttribute("y1", String(y + nameHeight + attrHeight));
+				line2.setAttribute("x2", String(x + w));
+				line2.setAttribute("y2", String(y + nameHeight + attrHeight));
+				line2.setAttribute("stroke", "var(--_node-stroke)");
+				line2.setAttribute("stroke-width", "1");
+				g.appendChild(line2);
+			}
+
+			return g;
+		}
+
 		case "state-end": {
 			const g = createElement("g");
 			const r = Math.min(w, h) / 3;
@@ -363,7 +437,182 @@ function renderNodeShape(node: PositionedNode, _ctx: RenderContext): SVGElement 
 	}
 }
 
+function renderEREntityLabelDOM(node: PositionedNode, ctx: RenderContext): SVGElement {
+	const g = createElement("g");
+	const parts = splitLabel(node.label);
+	const nx = node.x;
+	const nw = node.width;
+	const ncx = nx + nw / 2;
+	const fontSize = 14;
+	const attrFontSize = 12;
+	const headerH = fontSize * 1.2 + 16;
+
+	const entityName = parts[0] || "";
+	const nameText = createElement("text");
+	nameText.setAttribute("x", String(ncx));
+	nameText.setAttribute("y", String(node.y + headerH / 2));
+	nameText.setAttribute("text-anchor", "middle");
+	nameText.setAttribute("dominant-baseline", "middle");
+	nameText.setAttribute("fill", "var(--_text)");
+	nameText.setAttribute("font-family", ctx.font);
+	nameText.setAttribute("font-size", String(fontSize));
+	nameText.setAttribute("font-weight", "600");
+	nameText.textContent = entityName;
+	g.appendChild(nameText);
+
+	let idx = 1;
+	if (idx < parts.length && parts[idx] === "---") {
+		idx++;
+		const attrStartY = node.y + headerH + 8;
+		const lineH = attrFontSize * 1.4;
+		let attrIdx = 0;
+
+		while (idx < parts.length && parts[idx] !== "---") {
+			const attrLine = parts[idx] ?? "";
+			const attrY = attrStartY + attrIdx * lineH + attrFontSize / 2;
+
+			const keyMatch = attrLine.match(/^(PK|FK|UK|PK,FK|FK,PK)\s+/);
+			if (keyMatch) {
+				const keyStr = keyMatch[1]!;
+				const rest = attrLine.slice(keyMatch[0].length);
+
+				const keyText = createElement("text");
+				keyText.setAttribute("x", String(nx + 8));
+				keyText.setAttribute("y", String(attrY));
+				keyText.setAttribute("dominant-baseline", "middle");
+				keyText.setAttribute("fill", "var(--_node-stroke)");
+				keyText.setAttribute("font-family", ctx.font);
+				keyText.setAttribute("font-size", "10");
+				keyText.setAttribute("font-weight", "600");
+				keyText.textContent = keyStr;
+				g.appendChild(keyText);
+
+				const valText = createElement("text");
+				valText.setAttribute("x", String(nx + 34));
+				valText.setAttribute("y", String(attrY));
+				valText.setAttribute("dominant-baseline", "middle");
+				valText.setAttribute("fill", "var(--_text)");
+				valText.setAttribute("font-family", ctx.font);
+				valText.setAttribute("font-size", String(attrFontSize));
+				valText.setAttribute("font-weight", "400");
+				valText.textContent = rest;
+				g.appendChild(valText);
+			} else {
+				const valText = createElement("text");
+				valText.setAttribute("x", String(nx + 34));
+				valText.setAttribute("y", String(attrY));
+				valText.setAttribute("dominant-baseline", "middle");
+				valText.setAttribute("fill", "var(--_text)");
+				valText.setAttribute("font-family", ctx.font);
+				valText.setAttribute("font-size", String(attrFontSize));
+				valText.setAttribute("font-weight", "400");
+				valText.textContent = attrLine;
+				g.appendChild(valText);
+			}
+
+			attrIdx++;
+			idx++;
+		}
+	}
+
+	const erAttrCount = parseInt(node.inlineStyle?.attrCount || "0");
+	if (erAttrCount === 0) {
+		const noAttrText = createElement("text");
+		noAttrText.setAttribute("x", String(ncx));
+		noAttrText.setAttribute("y", String(node.y + headerH + 10));
+		noAttrText.setAttribute("text-anchor", "middle");
+		noAttrText.setAttribute("dominant-baseline", "middle");
+		noAttrText.setAttribute("fill", "var(--_muted)");
+		noAttrText.setAttribute("font-family", ctx.font);
+		noAttrText.setAttribute("font-size", "11");
+		noAttrText.setAttribute("font-style", "italic");
+		noAttrText.textContent = "(no attributes)";
+		g.appendChild(noAttrText);
+	}
+
+	return g;
+}
+
+function renderClassBoxLabelDOM(node: PositionedNode, ctx: RenderContext): SVGElement {
+	const g = createElement("g");
+	const parts = splitLabel(node.label);
+	const lineHeight = 16;
+	const padding = 12;
+	const nx = node.x;
+	const ncx = node.x + node.width / 2;
+	let currentY = node.y;
+
+	let idx = 0;
+	const className = parts[idx] || "";
+	currentY += padding / 2 + lineHeight / 2;
+
+	const nameText = createElement("text");
+	nameText.setAttribute("x", String(ncx));
+	nameText.setAttribute("y", String(currentY));
+	nameText.setAttribute("text-anchor", "middle");
+	nameText.setAttribute("dominant-baseline", "middle");
+	nameText.setAttribute("fill", "var(--_text)");
+	nameText.setAttribute("font-family", ctx.font);
+	nameText.setAttribute("font-size", "14");
+	nameText.setAttribute("font-weight", "600");
+	nameText.textContent = className;
+	g.appendChild(nameText);
+	idx++;
+
+	if (idx < parts.length && parts[idx] === "---") {
+		idx++;
+		currentY = node.y + lineHeight + padding;
+
+		while (idx < parts.length && parts[idx] !== "---") {
+			currentY += lineHeight * 0.8;
+			const memberText = createElement("text");
+			memberText.setAttribute("x", String(nx + padding));
+			memberText.setAttribute("y", String(currentY));
+			memberText.setAttribute("dominant-baseline", "middle");
+			memberText.setAttribute("fill", "var(--_text)");
+			memberText.setAttribute("font-family", ctx.font);
+			memberText.setAttribute("font-size", "12");
+			memberText.setAttribute("font-weight", "400");
+			memberText.textContent = parts[idx] ?? "";
+			g.appendChild(memberText);
+			idx++;
+		}
+	}
+
+	if (idx < parts.length && parts[idx] === "---") {
+		idx++;
+		const attrCount = parseInt(node.inlineStyle?.attrCount || "0");
+		const attrHeight = attrCount > 0 ? attrCount * lineHeight + padding : 0;
+		currentY = node.y + lineHeight + padding + attrHeight;
+
+		while (idx < parts.length) {
+			currentY += lineHeight * 0.8;
+			const methodText = createElement("text");
+			methodText.setAttribute("x", String(nx + padding));
+			methodText.setAttribute("y", String(currentY));
+			methodText.setAttribute("dominant-baseline", "middle");
+			methodText.setAttribute("fill", "var(--_text)");
+			methodText.setAttribute("font-family", ctx.font);
+			methodText.setAttribute("font-size", "12");
+			methodText.setAttribute("font-weight", "400");
+			methodText.textContent = parts[idx] ?? "";
+			g.appendChild(methodText);
+			idx++;
+		}
+	}
+
+	return g;
+}
+
 function renderNodeLabel(node: PositionedNode, ctx: RenderContext): SVGElement {
+	if (node.shape === "class-box") {
+		return renderClassBoxLabelDOM(node, ctx);
+	}
+
+	if (node.shape === "er-entity") {
+		return renderEREntityLabelDOM(node, ctx);
+	}
+
 	const lines = splitLabel(node.label);
 	const cx = node.x + node.width / 2;
 	const cy = node.y + node.height / 2;
@@ -444,10 +693,33 @@ function renderEdge(edge: PositionedEdge, _ctx: RenderContext, options: DOMRende
 		path.setAttribute("stroke-width", "1.5");
 	}
 
-	if (edge.hasArrowStart) {
+	const fromCard = edge.inlineStyle?.fromCardinality;
+	const toCard = edge.inlineStyle?.toCardinality;
+	const relationType = edge.inlineStyle?.relationType;
+	const erMarkerMap: Record<string, { start: string; end: string }> = {
+		one: { start: "er-one-start", end: "er-one" },
+		many: { start: "er-many-start", end: "er-many" },
+		"zero-one": { start: "er-zero-one-start", end: "er-zero-one" },
+		"zero-many": { start: "er-zero-many-start", end: "er-zero-many" },
+	};
+	const classSourceMarkers: Record<string, string> = {
+		inheritance: "cls-inheritance",
+		realization: "cls-inheritance",
+		composition: "cls-composition",
+		aggregation: "cls-aggregation",
+	};
+
+	if (relationType && classSourceMarkers[relationType]) {
+		path.setAttribute("marker-start", `url(#${classSourceMarkers[relationType]!})`);
+	} else if (fromCard && erMarkerMap[fromCard]) {
+		path.setAttribute("marker-start", `url(#${erMarkerMap[fromCard]!.start})`);
+	} else if (edge.hasArrowStart) {
 		path.setAttribute("marker-start", "url(#arrowhead-start)");
 	}
-	if (edge.hasArrowEnd) {
+
+	if (toCard && erMarkerMap[toCard]) {
+		path.setAttribute("marker-end", `url(#${erMarkerMap[toCard]!.end})`);
+	} else if (edge.hasArrowEnd) {
 		path.setAttribute("marker-end", "url(#arrowhead)");
 	}
 
@@ -580,6 +852,37 @@ function renderMarkers(_ctx: RenderContext): SVGElement {
 	defs.appendChild(arrowheadStart);
 	defs.appendChild(arrowheadOpen);
 	defs.appendChild(arrowheadCross);
+
+	const erMarkerDefs: Array<{ id: string; w: number; h: number; refX: number; refY: number; content: string }> = [
+		{ id: "er-one", w: 20, h: 16, refX: 18, refY: 8, content: '<line x1="18" y1="2" x2="18" y2="14" stroke="var(--_line)" stroke-width="1.5"/><line x1="14" y1="2" x2="14" y2="14" stroke="var(--_line)" stroke-width="1.5"/>' },
+		{ id: "er-one-start", w: 20, h: 16, refX: 2, refY: 8, content: '<line x1="2" y1="2" x2="2" y2="14" stroke="var(--_line)" stroke-width="1.5"/><line x1="6" y1="2" x2="6" y2="14" stroke="var(--_line)" stroke-width="1.5"/>' },
+		{ id: "er-many", w: 20, h: 16, refX: 18, refY: 8, content: '<line x1="18" y1="2" x2="18" y2="14" stroke="var(--_line)" stroke-width="1.5"/><path d="M18,8 L6,2 M18,8 L6,14" stroke="var(--_line)" stroke-width="1.5" fill="none"/>' },
+		{ id: "er-many-start", w: 20, h: 16, refX: 2, refY: 8, content: '<line x1="2" y1="2" x2="2" y2="14" stroke="var(--_line)" stroke-width="1.5"/><path d="M2,8 L14,2 M2,8 L14,14" stroke="var(--_line)" stroke-width="1.5" fill="none"/>' },
+		{ id: "er-zero-one", w: 24, h: 16, refX: 22, refY: 8, content: '<line x1="22" y1="2" x2="22" y2="14" stroke="var(--_line)" stroke-width="1.5"/><circle cx="14" cy="8" r="4" fill="none" stroke="var(--_line)" stroke-width="1.5"/>' },
+		{ id: "er-zero-one-start", w: 24, h: 16, refX: 2, refY: 8, content: '<line x1="2" y1="2" x2="2" y2="14" stroke="var(--_line)" stroke-width="1.5"/><circle cx="10" cy="8" r="4" fill="none" stroke="var(--_line)" stroke-width="1.5"/>' },
+		{ id: "er-zero-many", w: 24, h: 16, refX: 22, refY: 8, content: '<path d="M22,8 L10,2 M22,8 L10,14" stroke="var(--_line)" stroke-width="1.5" fill="none"/><circle cx="6" cy="8" r="4" fill="none" stroke="var(--_line)" stroke-width="1.5"/>' },
+		{ id: "er-zero-many-start", w: 24, h: 16, refX: 2, refY: 8, content: '<path d="M2,8 L14,2 M2,8 L14,14" stroke="var(--_line)" stroke-width="1.5" fill="none"/><circle cx="18" cy="8" r="4" fill="none" stroke="var(--_line)" stroke-width="1.5"/>' },
+	];
+
+	const allMarkerDefs: Array<{ id: string; w: number; h: number; refX: number; refY: number; content: string }> = [
+		...erMarkerDefs,
+		{ id: "cls-inheritance", w: 16, h: 14, refX: 1, refY: 7, content: '<path d="M15,1 L1,7 L15,13 z" fill="var(--_node-fill)" stroke="var(--_line)" stroke-width="1.5" stroke-linejoin="round"/>' },
+		{ id: "cls-composition", w: 14, h: 14, refX: 1, refY: 7, content: '<path d="M1,7 L7,1 L13,7 L7,13 z" fill="var(--_line)" stroke="var(--_line)" stroke-width="1"/>' },
+		{ id: "cls-aggregation", w: 14, h: 14, refX: 1, refY: 7, content: '<path d="M1,7 L7,1 L13,7 L7,13 z" fill="var(--_node-fill)" stroke="var(--_line)" stroke-width="1.5"/>' },
+	];
+
+	for (const def of allMarkerDefs) {
+		const marker = createElement("marker");
+		marker.setAttribute("id", def.id);
+		marker.setAttribute("markerWidth", String(def.w));
+		marker.setAttribute("markerHeight", String(def.h));
+		marker.setAttribute("refX", String(def.refX));
+		marker.setAttribute("refY", String(def.refY));
+		marker.setAttribute("orient", "auto");
+		marker.setAttribute("markerUnits", "userSpaceOnUse");
+		marker.innerHTML = def.content;
+		defs.appendChild(marker);
+	}
 
 	return defs;
 }

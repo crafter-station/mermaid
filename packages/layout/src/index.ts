@@ -34,6 +34,7 @@ interface LayoutEdge {
 	style: string;
 	hasArrowStart: boolean;
 	hasArrowEnd: boolean;
+	inlineStyle?: Record<string, string>;
 }
 
 function convertFlowchartToLayout(
@@ -69,15 +70,54 @@ function convertFlowchartToLayout(
 	return { nodes, edges };
 }
 
+function formatClassMember(m: {
+	name: string;
+	type?: string;
+	visibility: string;
+	isMethod: boolean;
+	returnType?: string;
+}): string {
+	const vis = m.visibility || "";
+	if (m.isMethod) {
+		const ret = m.returnType ? `: ${m.returnType}` : "";
+		return `${vis}${m.name}()${ret}`;
+	}
+	const type = m.type ? `: ${m.type}` : "";
+	return `${vis}${m.name}${type}`;
+}
+
 function convertClassToLayout(
 	ast: ClassAST,
 ): { nodes: LayoutNode[]; edges: LayoutEdge[] } {
 	const nodes: LayoutNode[] = Array.from(ast.classes.values()).map((cls) => {
-		const label = cls.label || cls.id;
+		const className = cls.label || cls.id;
+		const attrs = cls.members.filter((m) => !m.isMethod).map(formatClassMember);
+		const methods = cls.members.filter((m) => m.isMethod).map(formatClassMember);
+
+		const labelParts = [className];
+		if (attrs.length > 0 || methods.length > 0) {
+			labelParts.push("---");
+			labelParts.push(...attrs);
+		}
+		if (methods.length > 0) {
+			labelParts.push("---");
+			labelParts.push(...methods);
+		}
+
+		const label = labelParts.join("\n");
+
+		const attrCount = attrs.length;
+		const methodCount = methods.length;
+
 		return {
 			id: cls.id,
 			label,
-			shape: "rectangle",
+			shape: "class-box",
+			inlineStyle: {
+				className,
+				attrCount: String(attrCount),
+				methodCount: String(methodCount),
+			},
 		};
 	});
 
@@ -85,30 +125,58 @@ function convertClassToLayout(
 		source: rel.from,
 		target: rel.to,
 		label: rel.label,
-		style: "solid",
+		style: rel.type === "dependency" || rel.type === "realization" ? "dotted" : "solid",
 		hasArrowStart: false,
-		hasArrowEnd: true,
+		hasArrowEnd: rel.type === "association" || rel.type === "dependency",
+		inlineStyle: { relationType: rel.type },
 	}));
 
 	return { nodes, edges };
 }
 
+function formatERAttribute(attr: {
+	name: string;
+	type: string;
+	keys: string[];
+}): string {
+	const keyStr = attr.keys.length > 0 ? attr.keys.join(",") : "";
+	return keyStr ? `${keyStr} ${attr.type} ${attr.name}` : `${attr.type} ${attr.name}`;
+}
+
 function convertERToLayout(
 	ast: ERAST,
 ): { nodes: LayoutNode[]; edges: LayoutEdge[] } {
-	const nodes: LayoutNode[] = Array.from(ast.entities.values()).map((entity) => ({
-		id: entity.id,
-		label: entity.id,
-		shape: "rectangle",
-	}));
+	const nodes: LayoutNode[] = Array.from(ast.entities.values()).map((entity) => {
+		const attrs = entity.attributes.map(formatERAttribute);
+		const labelParts = [entity.id];
+		if (attrs.length > 0) {
+			labelParts.push("---");
+			labelParts.push(...attrs);
+		}
+		const label = labelParts.join("\n");
+
+		return {
+			id: entity.id,
+			label,
+			shape: "er-entity",
+			inlineStyle: {
+				entityName: entity.id,
+				attrCount: String(entity.attributes.length),
+			},
+		};
+	});
 
 	const edges: LayoutEdge[] = ast.relations.map((rel) => ({
 		source: rel.from,
 		target: rel.to,
 		label: rel.label,
-		style: "solid",
+		style: rel.identifying ? "solid" : "dotted",
 		hasArrowStart: false,
-		hasArrowEnd: true,
+		hasArrowEnd: false,
+		inlineStyle: {
+			fromCardinality: rel.fromCardinality,
+			toCardinality: rel.toCardinality,
+		},
 	}));
 
 	return { nodes, edges };
@@ -235,6 +303,7 @@ function layoutHierarchicalDiagram(
 				hasArrowStart: edge.hasArrowStart,
 				hasArrowEnd: edge.hasArrowEnd,
 				points: [],
+				inlineStyle: edge.inlineStyle,
 			};
 		}
 
@@ -275,6 +344,7 @@ function layoutHierarchicalDiagram(
 			hasArrowEnd: edge.hasArrowEnd,
 			points,
 			labelPosition: edge.label ? computeLabelPosition(points) : undefined,
+			inlineStyle: edge.inlineStyle,
 		};
 	});
 
