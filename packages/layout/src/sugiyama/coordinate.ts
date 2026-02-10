@@ -18,11 +18,9 @@ function assignLayerCoordinates<N, E>(
 	isHoriz: boolean,
 ): Map<number, number> {
 	const layerCoords = new Map<number, number>();
-	let coord = 0;
+	const layerSizes: number[] = [];
 
 	for (let i = 0; i < layerArrays.length; i++) {
-		layerCoords.set(i, coord);
-
 		const maxSize = Math.max(
 			...layerArrays[i].map((nodeId) => {
 				const node = graph.getNode(nodeId);
@@ -30,8 +28,15 @@ function assignLayerCoordinates<N, E>(
 				return isHoriz ? node.width : node.height;
 			}),
 		);
+		layerSizes.push(maxSize);
+	}
 
-		coord += maxSize + layerSpacing;
+	let coord = layerSizes[0]! / 2;
+	for (let i = 0; i < layerArrays.length; i++) {
+		if (i > 0) {
+			coord += layerSizes[i - 1]! / 2 + layerSpacing + layerSizes[i]! / 2;
+		}
+		layerCoords.set(i, coord);
 	}
 
 	return layerCoords;
