@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { ThemeProvider } from "next-themes";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { DiagramThemeProvider } from "@/components/theme-context";
 import "./globals.css";
 
@@ -37,11 +38,13 @@ export default function RootLayout({
 			suppressHydrationWarning
 		>
 			<body className="font-sans antialiased">
-				<ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-					<DiagramThemeProvider>
-						{children}
-					</DiagramThemeProvider>
-				</ThemeProvider>
+				<NuqsAdapter>
+					<ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+						<DiagramThemeProvider>
+							{children}
+						</DiagramThemeProvider>
+					</ThemeProvider>
+				</NuqsAdapter>
 			</body>
 		</html>
 	);
