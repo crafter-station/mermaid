@@ -56,7 +56,9 @@ export function clipToNodeBoundary(
 
 	switch (shape) {
 		case "circle":
-		case "doublecircle": {
+		case "doublecircle":
+		case "state-start":
+		case "state-end": {
 			const radius = Math.max(hw, hh);
 			const angle = Math.atan2(dy, dx);
 			return {

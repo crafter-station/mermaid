@@ -34,6 +34,16 @@ export function estimateNodeSize(
 	let height: number;
 
 	switch (shape) {
+		case "state-start": {
+			width = 28;
+			height = 28;
+			break;
+		}
+		case "state-end": {
+			width = 32;
+			height = 32;
+			break;
+		}
 		case "diamond":
 		case "rhombus": {
 			width = maxLineWidth * 1.6 + 32;

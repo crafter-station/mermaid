@@ -418,7 +418,13 @@ export function layout(
 
 	if (ast.type === "flowchart") {
 		const { nodes, edges } = convertFlowchartToLayout(ast);
-		return layoutHierarchicalDiagram(nodes, edges, mergedOptions, ast.direction, ast.subgraphs);
+		const isStateDiagram = nodes.some(
+			(n) => n.shape === "state-start" || n.shape === "state-end",
+		);
+		const flowOptions = isStateDiagram
+			? { ...mergedOptions, layerSpacing: 45, nodeSpacing: 30 }
+			: mergedOptions;
+		return layoutHierarchicalDiagram(nodes, edges, flowOptions, ast.direction, ast.subgraphs);
 	}
 
 	if (ast.type === "class") {
