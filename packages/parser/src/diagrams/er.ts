@@ -23,8 +23,10 @@ interface ParserState {
 const CARDINALITY_MAP: Record<string, ERCardinality> = {
 	"||": "one",
 	"o|": "zero-one",
+	"|o": "zero-one",
 	"}|": "many",
 	"|{": "many",
+	"}o": "zero-many",
 	"o{": "zero-many",
 	"{o": "zero-many",
 };
@@ -60,7 +62,7 @@ export function parseER(source: string): ParseResult<ERAST> {
 		} else if (state.currentEntity) {
 			parseAttribute(trimmed, lineSpan, state);
 		} else if (
-			/\|\||o\||}\||o\{|\|{|{o/.test(trimmed) &&
+			/\|\||o\||\|o|}\|}o|o\{|\|{|{o/.test(trimmed) &&
 			(trimmed.includes("--") || trimmed.includes(".."))
 		) {
 			parseRelation(trimmed, lineSpan, state);
@@ -143,7 +145,7 @@ function parseAttribute(
 
 function parseRelation(line: string, span: SourceSpan, state: ParserState): void {
 	const relationPattern =
-		/^(\w+)\s+((?:\|\||o\||\}\||o\{|\|\{|\{o))(--|\.\.)(\|\||o\||\}\||o\{|\|\{|\{o)\s+(\w+)\s*:\s*(.+)$/;
+		/^(\w+)\s+((?:\|\||o\||\|o|\}\||\}o|o\{|\|\{|\{o))(--|\.\.)(\|\||o\||\|o|\}\||\}o|o\{|\|\{|\{o)\s+(\w+)\s*:\s*(.+)$/;
 	const match = line.match(relationPattern);
 
 	if (!match) {
