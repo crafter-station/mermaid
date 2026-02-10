@@ -16,7 +16,6 @@ import { estimateNodeSize } from "./text-metrics";
 import { sugiyamaLayout } from "./sugiyama/index";
 import { routeEdge, computeLabelPosition } from "./edge-routing";
 import { layoutSequenceDiagram } from "./column/index";
-import { forceLayout } from "./force/index";
 import { layoutPieDiagram, layoutMindmapDiagram } from "./radial/index";
 import { layoutGanttDiagram } from "./timeline/index";
 
@@ -736,7 +735,7 @@ export function layout(
 
 	if (ast.type === "er") {
 		const { nodes, edges } = convertERToLayout(ast);
-		return forceLayout(nodes, edges, mergedOptions);
+		return layoutHierarchicalDiagram(nodes, edges, mergedOptions, "TB");
 	}
 
 	if (ast.type === "pie") {
