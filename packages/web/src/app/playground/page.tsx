@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { useQueryState, parseAsString } from "nuqs";
 import Script from "next/script";
@@ -642,6 +642,14 @@ function hideInstantly(svg: SVGSVGElement, step: Step): void {
 type OutputTab = "svg" | "ascii" | "code";
 
 export default function PlaygroundPage() {
+	return (
+		<Suspense>
+			<PlaygroundContent />
+		</Suspense>
+	);
+}
+
+function PlaygroundContent() {
 	const [tab, setTab] = useQueryState("tab", parseAsString.withDefault(PRESETS[0]!.category));
 	const activePreset = PRESETS.find((p) => p.category === tab) || PRESETS[0]!;
 	const [source, setSource] = useState(activePreset.source);
