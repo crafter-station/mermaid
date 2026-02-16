@@ -1,12 +1,12 @@
 # @crafter/mermaid
 
-Ultra-lightweight, zero-dependency Mermaid rendering engine. Parses, lays out, and renders Mermaid diagrams in **<20KB** (min+gzip).
+Ultra-lightweight, zero-dependency Mermaid rendering engine. Parses, lays out, and renders Mermaid diagrams in **30.5KB** (min+gzip).
 
 ## Why
 
 | | mermaid.js | @crafter/mermaid |
 |---|---|---|
-| Bundle size | ~2MB | **16.1 KB** gzipped |
+| Bundle size | ~2MB | **30.5 KB** gzipped |
 | Dependencies | 50+ | **Zero** |
 | API | Async | **Sync** |
 | Output | SVG string | SVG string + SVG DOM + Terminal (ANSI) |
@@ -19,12 +19,12 @@ Ultra-lightweight, zero-dependency Mermaid rendering engine. Parses, lays out, a
 
 | Package | Size | Description |
 |---------|------|-------------|
-| [`@crafter/mermaid`](./packages/mermaid) | ~1KB | Umbrella package (recommended) |
-| [`@crafter/mermaid-parser`](./packages/parser) | ~3KB | Text → AST with source spans |
-| [`@crafter/mermaid-layout`](./packages/layout) | ~7KB | AST → positioned graph (custom Sugiyama) |
-| [`@crafter/mermaid-renderer`](./packages/renderer) | ~5KB | Positioned graph → SVG |
+| [`@crafter/mermaid`](./packages/mermaid) | <1KB | Umbrella package (recommended) |
+| [`@crafter/mermaid-parser`](./packages/parser) | ~8KB | Text → AST with source spans |
+| [`@crafter/mermaid-layout`](./packages/layout) | ~14KB | AST → positioned graph (custom Sugiyama) |
+| [`@crafter/mermaid-renderer`](./packages/renderer) | ~17KB | Positioned graph → SVG |
 | [`@crafter/mermaid-themes`](./packages/themes) | ~2KB | 32 theme presets + CSS variables |
-| [`@crafter/mermaid-cli`](./packages/cli) | ~4KB | Terminal renderer (ANSI + Unicode) |
+| [`@crafter/mermaid-cli`](./packages/cli) | <1KB | Terminal renderer (ANSI + Unicode) |
 | [`@crafter/mermaid-player`](./packages/player) | ~3KB | Step-through animation system |
 
 ## Quick Start

@@ -3,7 +3,7 @@ const STEPS = [
 		number: "01",
 		title: "Parse",
 		package: "@crafter/mermaid-parser",
-		size: "~3KB",
+		size: "~8KB",
 		input: "Text",
 		output: "AST",
 		description: "Regex-based parser turns Mermaid syntax into a typed AST with source spans for every node and edge.",
@@ -12,7 +12,7 @@ const STEPS = [
 		number: "02",
 		title: "Layout",
 		package: "@crafter/mermaid-layout",
-		size: "~7KB",
+		size: "~14KB",
 		input: "AST",
 		output: "Graph",
 		description: "Custom Sugiyama algorithm computes coordinates, edge routing, and layer assignment. No dagre, no d3.",
@@ -21,7 +21,7 @@ const STEPS = [
 		number: "03",
 		title: "Render",
 		package: "@crafter/mermaid-renderer",
-		size: "~5KB",
+		size: "~17KB",
 		input: "Graph",
 		output: "SVG",
 		description: "Positioned graph becomes an SVG string or DOM element. Supports themes, zoom, pan, and keyboard nav.",
@@ -83,7 +83,6 @@ export function Architecture() {
 
 				<div className="mt-8 flex justify-center gap-6 text-xs text-[var(--text-muted)] font-mono">
 					<span>+ themes (~2KB)</span>
-					<span>+ cli (~4KB)</span>
 					<span>+ player (~3KB)</span>
 				</div>
 			</div>

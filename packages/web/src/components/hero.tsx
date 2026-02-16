@@ -7,7 +7,7 @@ export function Hero() {
 				<div className="grid lg:grid-cols-2 gap-16 items-center">
 					<div>
 						<p className="font-mono text-xs tracking-[0.15em] uppercase text-[var(--accent-cyan)] mb-4">
-							Zero dependencies. 16.8KB gzipped.
+							Zero dependencies. 30.5KB gzipped.
 						</p>
 
 						<h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6">
@@ -16,7 +16,7 @@ export function Hero() {
 						</h1>
 
 						<p className="text-lg text-[var(--text-secondary)] mb-8 max-w-lg">
-							Drop-in Mermaid rendering at 16.8KB. Same diagram syntax, synchronous API,
+							Drop-in Mermaid rendering at 30.5KB. Same diagram syntax, synchronous API,
 							32 themes — built from scratch with zero dependencies.
 						</p>
 

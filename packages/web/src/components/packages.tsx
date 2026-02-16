@@ -1,10 +1,10 @@
 const PACKAGES = [
-	{ name: "@crafter/mermaid", size: "~1KB", desc: "Umbrella package — recommended entry point" },
-	{ name: "@crafter/mermaid-parser", size: "~3KB", desc: "Text → AST with source spans" },
-	{ name: "@crafter/mermaid-layout", size: "~7KB", desc: "AST → positioned graph (custom Sugiyama)" },
-	{ name: "@crafter/mermaid-renderer", size: "~5KB", desc: "Positioned graph → SVG string or DOM" },
+	{ name: "@crafter/mermaid", size: "<1KB", desc: "Umbrella package — recommended entry point" },
+	{ name: "@crafter/mermaid-parser", size: "~8KB", desc: "Text → AST with source spans" },
+	{ name: "@crafter/mermaid-layout", size: "~14KB", desc: "AST → positioned graph (custom Sugiyama)" },
+	{ name: "@crafter/mermaid-renderer", size: "~17KB", desc: "Positioned graph → SVG string or DOM" },
 	{ name: "@crafter/mermaid-themes", size: "~2KB", desc: "32 theme presets + CSS custom properties" },
-	{ name: "@crafter/mermaid-cli", size: "~4KB", desc: "Terminal renderer with ANSI colors" },
+	{ name: "@crafter/mermaid-cli", size: "<1KB", desc: "Terminal renderer with ANSI colors" },
 	{ name: "@crafter/mermaid-player", size: "~3KB", desc: "Step-through animation system" },
 ];
 

@@ -1,5 +1,5 @@
 const ROWS = [
-	{ label: "Bundle size", theirs: "~2 MB", ours: "16.8 KB", highlight: true },
+	{ label: "Bundle size", theirs: "~2 MB", ours: "30.5 KB", highlight: true },
 	{ label: "Dependencies", theirs: "50+", ours: "Zero", highlight: true },
 	{ label: "API", theirs: "Async", ours: "Sync", highlight: false },
 	{ label: "Output", theirs: "SVG string", ours: "SVG + DOM + Terminal", highlight: false, link: "#samples" },
