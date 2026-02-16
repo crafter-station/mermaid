@@ -1,6 +1,7 @@
 import type {
 	DiagramAST,
 	FlowchartAST,
+	FlowchartSubgraph,
 	SequenceAST,
 	ClassAST,
 	ERAST,
@@ -17,74 +18,83 @@ export interface StepInfo {
 function decomposeFlowchart(ast: FlowchartAST): StepInfo[] {
 	const steps: StepInfo[] = [];
 	let index = 0;
-	const emittedNodes = new Set<string>();
-	const emittedEdges = new Set<string>();
 
-	const adjacency = new Map<string, { target: string; edgeIndex: number }[]>();
-	const edgeList = ast.edges.map((e, i) => ({ source: e.source, target: e.target, label: e.label, idx: i }));
-
-	for (const edge of edgeList) {
-		if (!adjacency.has(edge.source)) adjacency.set(edge.source, []);
-		adjacency.get(edge.source)!.push({ target: edge.target, edgeIndex: edge.idx });
-	}
-
-	const targetSet = new Set(ast.edges.map((e) => e.target));
-	const roots: string[] = [];
-	for (const [id] of ast.nodes) {
-		if (!targetSet.has(id)) roots.push(id);
-	}
-	if (roots.length === 0 && ast.nodes.size > 0) {
-		roots.push(ast.nodes.keys().next().value!);
-	}
-
-	function emitNode(id: string): void {
-		if (emittedNodes.has(id)) return;
-		emittedNodes.add(id);
-		const node = ast.nodes.get(id);
-		steps.push({
-			type: "node",
-			id,
-			label: node?.label,
-			index: index++,
-			sourceLine: node?.span?.start?.line,
-		});
-	}
-
-	const queue: string[] = [...roots];
-	const visited = new Set<string>();
-
-	while (queue.length > 0) {
-		const nodeId = queue.shift()!;
-		if (visited.has(nodeId)) continue;
-		visited.add(nodeId);
-
-		emitNode(nodeId);
-
-		const neighbors = adjacency.get(nodeId) || [];
-		for (const { target, edgeIndex } of neighbors) {
-			const edgeKey = `${nodeId}->${target}`;
-			if (emittedEdges.has(edgeKey)) continue;
-			emittedEdges.add(edgeKey);
-
-			const edge = ast.edges[edgeIndex]!;
-			steps.push({
-				type: "edge",
-				id: edgeKey,
-				label: edge.label,
-				index: index++,
-				sourceLine: edge.span?.start?.line,
-			});
-
-			emitNode(target);
-
-			if (!visited.has(target)) {
-				queue.push(target);
+	const groupNodes = new Map<string, Set<string>>();
+	function collectGroupNodes(subs: FlowchartSubgraph[]): void {
+		for (const sg of subs) {
+			const allNodes = new Set<string>();
+			function collectAll(sub: FlowchartSubgraph) {
+				for (const nodeId of sub.nodeIds) allNodes.add(nodeId);
+				for (const child of sub.children) collectAll(child);
 			}
+			collectAll(sg);
+			groupNodes.set(sg.id, allNodes);
+			if (sg.children.length > 0) collectGroupNodes(sg.children);
 		}
 	}
+	collectGroupNodes(ast.subgraphs);
 
-	for (const [id] of ast.nodes) {
-		emitNode(id);
+	const adjacency = new Map<string, { target: string; edgeIndex: number }[]>();
+	for (let i = 0; i < ast.edges.length; i++) {
+		const e = ast.edges[i]!;
+		if (!adjacency.has(e.source)) adjacency.set(e.source, []);
+		adjacency.get(e.source)!.push({ target: e.target, edgeIndex: i });
+	}
+
+	const inDegree = new Map<string, number>();
+	for (const [id] of ast.nodes) inDegree.set(id, 0);
+	for (const e of ast.edges) inDegree.set(e.target, (inDegree.get(e.target) || 0) + 1);
+
+	const layers: string[][] = [];
+	const remaining = new Map(inDegree);
+	const assigned = new Set<string>();
+	while (assigned.size < ast.nodes.size) {
+		const layer: string[] = [];
+		for (const [id, deg] of remaining) {
+			if (deg === 0 && !assigned.has(id)) layer.push(id);
+		}
+		if (layer.length === 0) {
+			for (const [id] of ast.nodes) {
+				if (!assigned.has(id)) layer.push(id);
+			}
+		}
+		for (const id of layer) {
+			assigned.add(id);
+			remaining.delete(id);
+			for (const { target } of adjacency.get(id) || []) {
+				if (remaining.has(target)) remaining.set(target, remaining.get(target)! - 1);
+			}
+		}
+		layers.push(layer);
+	}
+
+	const emittedEdges = new Set<string>();
+	const emittedGroups = new Set<string>();
+	const emittedNodes = new Set<string>();
+
+	for (const layer of layers) {
+		for (const nodeId of layer) {
+			if (emittedNodes.has(nodeId)) continue;
+			emittedNodes.add(nodeId);
+			const node = ast.nodes.get(nodeId);
+			steps.push({ type: "node", id: nodeId, label: node?.label, index: index++, sourceLine: node?.span?.start?.line });
+		}
+		for (const nodeId of layer) {
+			for (const { target, edgeIndex } of adjacency.get(nodeId) || []) {
+				const edgeKey = `${nodeId}->${target}`;
+				if (emittedEdges.has(edgeKey)) continue;
+				emittedEdges.add(edgeKey);
+				const edge = ast.edges[edgeIndex]!;
+				steps.push({ type: "edge", id: edgeKey, label: edge.label, index: index++, sourceLine: edge.span?.start?.line });
+			}
+		}
+		for (const [groupId, members] of groupNodes) {
+			if (emittedGroups.has(groupId)) continue;
+			if ([...members].every((n) => emittedNodes.has(n))) {
+				emittedGroups.add(groupId);
+				steps.push({ type: "group", id: groupId, label: groupId, index: index++ });
+			}
+		}
 	}
 
 	return steps;
