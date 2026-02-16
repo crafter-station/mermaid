@@ -4,3 +4,4 @@ dist
 .turbo
 test-output.html
 packages/visual-test.html
+.vercel
