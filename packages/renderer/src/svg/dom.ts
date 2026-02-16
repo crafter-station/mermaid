@@ -1,6 +1,7 @@
 import type { PositionedGraph, PositionedGroup, PositionedNode, PositionedEdge } from "@crafter/mermaid-layout";
 import { DEFAULTS, resolveColors } from "@crafter/mermaid-themes";
 import type { RenderOptions, RenderContext } from "../types";
+import { roundedPathData } from "./edges";
 
 export interface DOMRenderOptions extends RenderOptions {
 	container?: HTMLElement;
@@ -21,22 +22,34 @@ function splitLabel(label: string): string[] {
 }
 
 function renderGroupBackground(group: PositionedGroup, _ctx: RenderContext): SVGElement {
-	const rect = createElement("rect");
-	rect.setAttribute("x", String(group.x));
-	rect.setAttribute("y", String(group.y));
-	rect.setAttribute("width", String(group.width));
-	rect.setAttribute("height", String(group.height));
-	rect.setAttribute("fill", "var(--_group-fill)");
-	rect.setAttribute("stroke", "var(--_group-stroke)");
-	rect.setAttribute("stroke-width", "1.5");
-	rect.setAttribute("rx", "4");
-	return rect;
+	const g = createElement("g");
+	const bg = createElement("rect");
+	bg.setAttribute("x", String(group.x));
+	bg.setAttribute("y", String(group.y));
+	bg.setAttribute("width", String(group.width));
+	bg.setAttribute("height", String(group.height));
+	bg.setAttribute("fill", "var(--_group-fill)");
+	bg.setAttribute("stroke", "var(--_group-stroke)");
+	bg.setAttribute("stroke-width", "1.5");
+	bg.setAttribute("rx", "4");
+	g.appendChild(bg);
+
+	const stripes = createElement("rect");
+	stripes.setAttribute("x", String(group.x));
+	stripes.setAttribute("y", String(group.y));
+	stripes.setAttribute("width", String(group.width));
+	stripes.setAttribute("height", String(group.height));
+	stripes.setAttribute("fill", "url(#group-stripes)");
+	stripes.setAttribute("rx", "4");
+	g.appendChild(stripes);
+
+	return g;
 }
 
 function renderGroupLabel(group: PositionedGroup, ctx: RenderContext): SVGElement {
 	const lines = splitLabel(group.label);
-	const x = group.x + 8;
-	const y = group.y + 8;
+	const x = group.x + 12;
+	const y = group.y + 18;
 	const lineHeight = 14;
 
 	const text = createElement("text");
@@ -58,11 +71,14 @@ function renderGroupLabel(group: PositionedGroup, ctx: RenderContext): SVGElemen
 
 function renderGroups(groups: PositionedGroup[], ctx: RenderContext, container: SVGElement): void {
 	groups.forEach((group) => {
-		container.appendChild(renderGroupBackground(group, ctx));
-		container.appendChild(renderGroupLabel(group, ctx));
+		const g = createElement("g");
+		g.setAttribute("data-group-id", group.id);
+		g.appendChild(renderGroupBackground(group, ctx));
+		g.appendChild(renderGroupLabel(group, ctx));
 		if (group.children.length > 0) {
-			renderGroups(group.children, ctx, container);
+			renderGroups(group.children, ctx, g);
 		}
+		container.appendChild(g);
 	});
 }
 
@@ -672,14 +688,15 @@ function renderNode(node: PositionedNode, ctx: RenderContext, options: DOMRender
 	return g;
 }
 
-function renderEdge(edge: PositionedEdge, _ctx: RenderContext, options: DOMRenderOptions): SVGElement {
+function renderEdge(edge: PositionedEdge, _ctx: RenderContext, options: DOMRenderOptions, edgeIndex?: number): SVGElement {
 	const g = createElement("g");
 	g.setAttribute("data-edge-source", edge.source);
 	g.setAttribute("data-edge-target", edge.target);
+	if (edgeIndex !== undefined) g.setAttribute("data-edge-index", String(edgeIndex));
 
 	if (edge.points.length < 2) return g;
 
-	const pathData = edge.points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+	const pathData = roundedPathData(edge.points, 8);
 
 	const path = createElement("path");
 	path.setAttribute("d", pathData);
@@ -739,10 +756,14 @@ function renderEdge(edge: PositionedEdge, _ctx: RenderContext, options: DOMRende
 	return g;
 }
 
-function renderEdgeLabel(edge: PositionedEdge, ctx: RenderContext): SVGElement {
+function renderEdgeLabel(edge: PositionedEdge, ctx: RenderContext, edgeIndex?: number): SVGElement {
 	const g = createElement("g");
 
 	if (!edge.label || !edge.labelPosition) return g;
+
+	g.setAttribute("data-edge-label-source", edge.source);
+	g.setAttribute("data-edge-label-target", edge.target);
+	if (edgeIndex !== undefined) g.setAttribute("data-edge-label-index", String(edgeIndex));
 
 	const { x, y } = edge.labelPosition;
 	const lines = splitLabel(edge.label);
@@ -767,7 +788,7 @@ function renderEdgeLabel(edge: PositionedEdge, ctx: RenderContext): SVGElement {
 
 	const text = createElement("text");
 	text.setAttribute("fill", "var(--_text)");
-	text.setAttribute("font-family", ctx.font);
+	text.setAttribute("font-family", "'Geist Mono', 'SF Mono', 'Fira Code', monospace");
 	text.setAttribute("font-size", "11");
 	text.setAttribute("font-weight", "500");
 
@@ -888,6 +909,22 @@ function renderMarkers(_ctx: RenderContext): SVGElement {
 		defs.appendChild(marker);
 	}
 
+	const groupPattern = createElement("pattern");
+	groupPattern.setAttribute("id", "group-stripes");
+	groupPattern.setAttribute("width", "6");
+	groupPattern.setAttribute("height", "6");
+	groupPattern.setAttribute("patternUnits", "userSpaceOnUse");
+	groupPattern.setAttribute("patternTransform", "rotate(-45)");
+	const stripeLine = createElement("line");
+	stripeLine.setAttribute("x1", "0");
+	stripeLine.setAttribute("y1", "0");
+	stripeLine.setAttribute("x2", "0");
+	stripeLine.setAttribute("y2", "6");
+	stripeLine.setAttribute("stroke", "var(--_group-stroke)");
+	stripeLine.setAttribute("stroke-width", "0.5");
+	groupPattern.appendChild(stripeLine);
+	defs.appendChild(groupPattern);
+
 	return defs;
 }
 
@@ -956,12 +993,13 @@ export function renderToDOM(graph: PositionedGraph, options?: DOMRenderOptions):
 
 	renderGroups(graph.groups, ctx, mainGroup);
 
-	graph.edges.forEach((edge) => {
-		mainGroup.appendChild(renderEdge(edge, ctx, options || {}));
+	graph.edges.forEach((edge, i) => {
+		mainGroup.appendChild(renderEdge(edge, ctx, options || {}, i));
 	});
 
-	graph.edges.forEach((edge) => {
-		mainGroup.appendChild(renderEdgeLabel(edge, ctx));
+	graph.edges.forEach((edge, i) => {
+		const label = renderEdgeLabel(edge, ctx, i);
+		mainGroup.appendChild(label);
 	});
 
 	graph.nodes.forEach((node) => {

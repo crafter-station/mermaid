@@ -135,15 +135,15 @@ export function renderEdgeLabel(edge: PositionedEdge, ctx: RenderContext): strin
 		})
 		.join("");
 
-	const text = `<text fill="var(--_text)" font-family="${ctx.font}" font-size="11" font-weight="500">${tspans}</text>`;
+	const text = `<text fill="var(--_text)" font-family="'Geist Mono', 'SF Mono', 'Fira Code', monospace" font-size="11" font-weight="500">${tspans}</text>`;
 
 	return bg + text;
 }
 
 export function renderGroupLabel(group: PositionedGroup, ctx: RenderContext): string {
 	const lines = splitLabel(group.label);
-	const x = group.x + 8;
-	const y = group.y + 8;
+	const x = group.x + 12;
+	const y = group.y + 18;
 	const lineHeight = 14;
 
 	const tspans = lines

@@ -1,6 +1,57 @@
 import type { PositionedEdge } from "@crafter/mermaid-layout";
 import type { RenderContext } from "../types";
 
+export function roundedPathData(points: { x: number; y: number }[], radius: number): string {
+	if (points.length < 2) return "";
+	if (points.length === 2 || radius <= 0) {
+		return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+	}
+
+	const parts: string[] = [`M ${points[0].x} ${points[0].y}`];
+
+	for (let i = 1; i < points.length - 1; i++) {
+		const prev = points[i - 1]!;
+		const curr = points[i]!;
+		const next = points[i + 1]!;
+
+		const dxIn = curr.x - prev.x;
+		const dyIn = curr.y - prev.y;
+		const dxOut = next.x - curr.x;
+		const dyOut = next.y - curr.y;
+
+		const lenIn = Math.sqrt(dxIn * dxIn + dyIn * dyIn);
+		const lenOut = Math.sqrt(dxOut * dxOut + dyOut * dyOut);
+
+		if (lenIn < 1 || lenOut < 1) {
+			parts.push(`L ${curr.x} ${curr.y}`);
+			continue;
+		}
+
+		const cross = dxIn * dyOut - dyIn * dxOut;
+		if (Math.abs(cross) < 0.1) {
+			parts.push(`L ${curr.x} ${curr.y}`);
+			continue;
+		}
+
+		const r = Math.min(radius, lenIn / 2, lenOut / 2);
+
+		const p1x = curr.x - (dxIn / lenIn) * r;
+		const p1y = curr.y - (dyIn / lenIn) * r;
+		const p2x = curr.x + (dxOut / lenOut) * r;
+		const p2y = curr.y + (dyOut / lenOut) * r;
+
+		const sweep = cross > 0 ? 1 : 0;
+
+		parts.push(`L ${p1x} ${p1y}`);
+		parts.push(`A ${r} ${r} 0 0 ${sweep} ${p2x} ${p2y}`);
+	}
+
+	const last = points[points.length - 1]!;
+	parts.push(`L ${last.x} ${last.y}`);
+
+	return parts.join(" ");
+}
+
 const ER_MARKER_MAP: Record<string, { start: string; end: string }> = {
 	one: { start: "er-one-start", end: "er-one" },
 	many: { start: "er-many-start", end: "er-many" },
@@ -20,7 +71,7 @@ export function renderEdge(edge: PositionedEdge, ctx: RenderContext): string {
 
 	if (points.length < 2) return "";
 
-	const pathData = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+	const pathData = roundedPathData(points, 8);
 
 	let strokeDasharray = "";
 	let strokeWidth = "1.5";

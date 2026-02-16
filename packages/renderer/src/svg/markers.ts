@@ -56,6 +56,9 @@ export function renderMarkers(ctx: RenderContext): string {
 			<marker id="cls-aggregation" markerWidth="14" markerHeight="14" refX="1" refY="7" orient="auto" markerUnits="userSpaceOnUse">
 				<path d="M1,7 L7,1 L13,7 L7,13 z" fill="var(--_node-fill)" stroke="var(--_line)" stroke-width="1.5"/>
 			</marker>
+			<pattern id="group-stripes" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+				<line x1="0" y1="0" x2="0" y2="6" stroke="var(--_group-stroke)" stroke-width="0.5"/>
+			</pattern>
 		</defs>
 	`;
 }

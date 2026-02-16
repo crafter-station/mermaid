@@ -7,7 +7,7 @@ import { renderMarkers } from "./markers";
 import { renderShape } from "./shapes";
 
 function renderGroupBackground(group: PositionedGroup, _ctx: RenderContext): string {
-	return `<rect x="${group.x}" y="${group.y}" width="${group.width}" height="${group.height}" fill="var(--_group-fill)" stroke="var(--_group-stroke)" stroke-width="1.5" rx="4"/>`;
+	return `<g><rect x="${group.x}" y="${group.y}" width="${group.width}" height="${group.height}" fill="var(--_group-fill)" stroke="var(--_group-stroke)" stroke-width="1.5" rx="4"/><rect x="${group.x}" y="${group.y}" width="${group.width}" height="${group.height}" fill="url(#group-stripes)" rx="4"/></g>`;
 }
 
 function renderGroups(groups: PositionedGroup[], ctx: RenderContext): string {
