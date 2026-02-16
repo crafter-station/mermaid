@@ -13,40 +13,97 @@ const DEFAULT_SOURCE = `graph TD
 
 const PANEL_HEIGHT = "h-[400px] md:h-[480px]";
 
+const BASE_NODE = 500;
+const BASE_EDGE = 650;
+const BASE_GAP = 150;
+
+const SPEED_PRESETS = [
+	{ label: "0.5x", value: 2 },
+	{ label: "1x", value: 1 },
+	{ label: "1.5x", value: 1 / 1.5 },
+	{ label: "2x", value: 0.5 },
+] as const;
+
 interface Step {
 	type: "node" | "edge";
 	id: string;
 	label: string;
 	sourceLine?: number;
+	edgeIndex?: number;
+}
+
+interface LayerStep {
+	items: Step[];
+	label: string;
 }
 
 function smartDecompose(ast: {
 	nodes: { id: string; label: string }[];
 	edges: { source: string; target: string; label?: string }[];
-}, sourceLines: string[]): Step[] {
-	const steps: Step[] = [];
-	const emittedNodes = new Set<string>();
-	const emittedEdges = new Set<string>();
-
+}, sourceLines: string[]): LayerStep[] {
+	const layerSteps: LayerStep[] = [];
 	const nodeMap = new Map<string, { id: string; label: string }>();
-	for (const node of ast.nodes) {
-		nodeMap.set(node.id, node);
+	for (const node of ast.nodes) nodeMap.set(node.id, node);
+
+	const fullAdj = new Map<string, string[]>();
+	for (const e of ast.edges) {
+		if (!fullAdj.has(e.source)) fullAdj.set(e.source, []);
+		fullAdj.get(e.source)!.push(e.target);
 	}
 
-	const adjacency = new Map<string, { target: string; edgeIndex: number }[]>();
-	for (let i = 0; i < ast.edges.length; i++) {
-		const e = ast.edges[i]!;
+	const backEdges = new Set<string>();
+	const visited = new Set<string>();
+	const inStack = new Set<string>();
+	function dfs(node: string): void {
+		visited.add(node);
+		inStack.add(node);
+		for (const neighbor of fullAdj.get(node) || []) {
+			if (inStack.has(neighbor)) {
+				backEdges.add(`${node}->${neighbor}`);
+			} else if (!visited.has(neighbor)) {
+				dfs(neighbor);
+			}
+		}
+		inStack.delete(node);
+	}
+	for (const node of ast.nodes) {
+		if (!visited.has(node.id)) dfs(node.id);
+	}
+
+	const inDegree = new Map<string, number>();
+	const adjacency = new Map<string, string[]>();
+	for (const node of ast.nodes) inDegree.set(node.id, 0);
+	for (const e of ast.edges) {
+		if (!inDegree.has(e.source) || !inDegree.has(e.target)) continue;
+		if (backEdges.has(`${e.source}->${e.target}`)) continue;
 		if (!adjacency.has(e.source)) adjacency.set(e.source, []);
-		adjacency.get(e.source)!.push({ target: e.target, edgeIndex: i });
+		adjacency.get(e.source)!.push(e.target);
+		inDegree.set(e.target, (inDegree.get(e.target) || 0) + 1);
 	}
 
-	const targetSet = new Set(ast.edges.map((e) => e.target));
-	const roots: string[] = [];
-	for (const node of ast.nodes) {
-		if (!targetSet.has(node.id)) roots.push(node.id);
-	}
-	if (roots.length === 0 && ast.nodes.length > 0) {
-		roots.push(ast.nodes[0]!.id);
+	const layers: string[][] = [];
+	const remaining = new Map(inDegree);
+	const assigned = new Set<string>();
+	while (assigned.size < ast.nodes.length) {
+		const layer: string[] = [];
+		for (const [id, deg] of remaining) {
+			if (deg === 0 && !assigned.has(id)) layer.push(id);
+		}
+		if (layer.length === 0) {
+			for (const node of ast.nodes) {
+				if (!assigned.has(node.id)) layer.push(node.id);
+			}
+		}
+		for (const id of layer) {
+			assigned.add(id);
+			remaining.delete(id);
+			for (const target of adjacency.get(id) || []) {
+				if (remaining.has(target)) {
+					remaining.set(target, remaining.get(target)! - 1);
+				}
+			}
+		}
+		layers.push(layer);
 	}
 
 	function findSourceLine(id: string, type: "node" | "edge", edgeTarget?: string): number | undefined {
@@ -65,92 +122,155 @@ function smartDecompose(ast: {
 		return undefined;
 	}
 
-	function emitNode(id: string): void {
-		if (emittedNodes.has(id)) return;
-		emittedNodes.add(id);
-		const node = nodeMap.get(id);
-		steps.push({
-			type: "node",
-			id,
-			label: node?.label || id,
-			sourceLine: findSourceLine(id, "node"),
-		});
-	}
+	const emittedEdges = new Set<string>();
+	const emittedNodes = new Set<string>();
 
-	const queue: string[] = [...roots];
-	const visited = new Set<string>();
+	for (const layer of layers) {
+		const nodeSteps: Step[] = [];
+		for (const nodeId of layer) {
+			if (emittedNodes.has(nodeId)) continue;
+			emittedNodes.add(nodeId);
+			const node = nodeMap.get(nodeId);
+			nodeSteps.push({ type: "node", id: nodeId, label: node?.label || nodeId, sourceLine: findSourceLine(nodeId, "node") });
+		}
+		if (nodeSteps.length > 0) {
+			layerSteps.push({ items: nodeSteps, label: nodeSteps.map((s) => s.label).join(", ") });
+		}
 
-	while (queue.length > 0) {
-		const nodeId = queue.shift()!;
-		if (visited.has(nodeId)) continue;
-		visited.add(nodeId);
-
-		emitNode(nodeId);
-
-		const neighbors = adjacency.get(nodeId) || [];
-		for (const { target, edgeIndex } of neighbors) {
-			const edgeKey = `${nodeId}->${target}`;
-			if (emittedEdges.has(edgeKey)) continue;
-			emittedEdges.add(edgeKey);
-
-			const edge = ast.edges[edgeIndex]!;
-			steps.push({
-				type: "edge",
-				id: edgeKey,
-				label: edge.label || `${nodeId} → ${target}`,
-				sourceLine: findSourceLine(nodeId, "edge", target),
-			});
-
-			emitNode(target);
-
-			if (!visited.has(target)) {
-				queue.push(target);
+		const edgeSteps: Step[] = [];
+		for (const nodeId of layer) {
+			for (const target of fullAdj.get(nodeId) || []) {
+				const edgeKey = `${nodeId}->${target}`;
+				if (emittedEdges.has(edgeKey)) continue;
+				emittedEdges.add(edgeKey);
+				const edge = ast.edges.find((e) => e.source === nodeId && e.target === target);
+				edgeSteps.push({ type: "edge", id: edgeKey, label: edge?.label || `${nodeId} -> ${target}`, sourceLine: findSourceLine(nodeId, "edge", target) });
 			}
+		}
+		if (edgeSteps.length > 0) {
+			layerSteps.push({ items: edgeSteps, label: `${edgeSteps.length} edge${edgeSteps.length > 1 ? "s" : ""}` });
 		}
 	}
 
-	for (const node of ast.nodes) {
-		emitNode(node.id);
-	}
-
-	return steps;
+	return layerSteps;
 }
 
-function renderAtStep(
-	fullGraph: Record<string, unknown>,
-	steps: Step[],
-	stepIndex: number,
-	theme: Record<string, string>,
-): string {
-	if (!window.crafterMermaid) return "";
+function hideAllElements(svg: SVGSVGElement): void {
+	svg.querySelectorAll("[data-node-id]").forEach((el) => {
+		const g = el as SVGGElement;
+		g.style.opacity = "0";
+		g.style.transform = "scale(0.92)";
+		g.style.transformOrigin = "center center";
+		g.style.transformBox = "fill-box";
+	});
+	svg.querySelectorAll("[data-edge-source]").forEach((el) => {
+		const g = el as SVGGElement;
+		g.style.opacity = "0";
+		const path = g.querySelector("path") as SVGPathElement | null;
+		if (path) {
+			try {
+				const length = path.getTotalLength();
+				path.style.strokeDasharray = String(length);
+				path.style.strokeDashoffset = String(length);
+			} catch {}
+			const markerEnd = path.getAttribute("marker-end");
+			const markerStart = path.getAttribute("marker-start");
+			if (markerEnd) { path.setAttribute("data-marker-end", markerEnd); path.removeAttribute("marker-end"); }
+			if (markerStart) { path.setAttribute("data-marker-start", markerStart); path.removeAttribute("marker-start"); }
+		}
+	});
+	svg.querySelectorAll("[data-edge-label-source]").forEach((el) => {
+		(el as SVGGElement).style.opacity = "0";
+	});
+}
 
-	const visibleNodeIds = new Set<string>();
-	const visibleEdgeIds = new Set<string>();
+function animateNodeIn(svg: SVGSVGElement, nodeId: string, dur: number): Promise<void> {
+	const el = svg.querySelector(`[data-node-id="${nodeId}"]`) as SVGGElement | null;
+	if (!el) return Promise.resolve();
+	return new Promise((resolve) => {
+		el.style.transition = `opacity ${dur}ms cubic-bezier(0.16, 1, 0.3, 1), transform ${dur}ms cubic-bezier(0.16, 1, 0.3, 1)`;
+		el.getBoundingClientRect();
+		el.style.opacity = "1";
+		el.style.transform = "scale(1)";
+		setTimeout(resolve, dur);
+	});
+}
 
-	for (let i = 0; i <= stepIndex; i++) {
-		const step = steps[i];
-		if (!step) continue;
-		if (step.type === "node") visibleNodeIds.add(step.id);
-		else visibleEdgeIds.add(step.id);
+function animateEdgeIn(svg: SVGSVGElement, source: string, target: string, dur: number, labelDur: number): Promise<void> {
+	const el = svg.querySelector(`[data-edge-source="${source}"][data-edge-target="${target}"]`) as SVGGElement | null;
+	if (!el) return Promise.resolve();
+	const path = el.querySelector("path") as SVGPathElement | null;
+	if (!path) { el.style.opacity = "1"; return Promise.resolve(); }
+
+	return new Promise((resolve) => {
+		el.style.opacity = "1";
+		path.style.transition = `stroke-dashoffset ${dur}ms cubic-bezier(0.33, 1, 0.68, 1)`;
+		path.getBoundingClientRect();
+		path.style.strokeDashoffset = "0";
+
+		setTimeout(() => {
+			const savedEnd = path.getAttribute("data-marker-end");
+			const savedStart = path.getAttribute("data-marker-start");
+			if (savedEnd) path.setAttribute("marker-end", savedEnd);
+			if (savedStart) path.setAttribute("marker-start", savedStart);
+			path.style.strokeDasharray = "";
+			path.style.strokeDashoffset = "";
+			path.style.transition = "";
+
+			const label = svg.querySelector(`[data-edge-label-source="${source}"][data-edge-label-target="${target}"]`) as SVGGElement | null;
+			if (label) {
+				label.style.transition = `opacity ${labelDur}ms ease-out`;
+				label.getBoundingClientRect();
+				label.style.opacity = "1";
+			}
+			resolve();
+		}, dur);
+	});
+}
+
+function revealInstantly(svg: SVGSVGElement, step: Step): void {
+	if (step.type === "node") {
+		const el = svg.querySelector(`[data-node-id="${step.id}"]`) as SVGGElement | null;
+		if (el) { el.style.transition = "none"; el.style.opacity = "1"; el.style.transform = "scale(1)"; }
+	} else if (step.type === "edge") {
+		const [src, tgt] = step.id.split("->");
+		const el = svg.querySelector(`[data-edge-source="${src}"][data-edge-target="${tgt}"]`) as SVGGElement | null;
+		if (el) {
+			el.style.transition = "none"; el.style.opacity = "1";
+			const path = el.querySelector("path") as SVGPathElement | null;
+			if (path) {
+				path.style.transition = "none"; path.style.strokeDashoffset = "0"; path.style.strokeDasharray = "";
+				const savedEnd = path.getAttribute("data-marker-end");
+				const savedStart = path.getAttribute("data-marker-start");
+				if (savedEnd) path.setAttribute("marker-end", savedEnd);
+				if (savedStart) path.setAttribute("marker-start", savedStart);
+			}
+			const label = svg.querySelector(`[data-edge-label-source="${src}"][data-edge-label-target="${tgt}"]`) as SVGGElement | null;
+			if (label) { label.style.transition = "none"; label.style.opacity = "1"; }
+		}
 	}
+}
 
-	const fg = fullGraph as {
-		width: number;
-		height: number;
-		nodes: { id: string; label: string; [k: string]: unknown }[];
-		edges: { source: string; target: string; label?: string; [k: string]: unknown }[];
-		groups: unknown[];
-	};
-
-	const filteredGraph = {
-		width: fg.width,
-		height: fg.height,
-		nodes: fg.nodes.filter((n) => visibleNodeIds.has(n.id)),
-		edges: fg.edges.filter((e) => visibleEdgeIds.has(`${e.source}->${e.target}`)),
-		groups: fg.groups,
-	};
-
-	return window.crafterMermaid.renderToString(filteredGraph, { theme });
+function hideInstantly(svg: SVGSVGElement, step: Step): void {
+	if (step.type === "node") {
+		const el = svg.querySelector(`[data-node-id="${step.id}"]`) as SVGGElement | null;
+		if (el) { el.style.transition = "none"; el.style.opacity = "0"; el.style.transform = "scale(0.92)"; }
+	} else if (step.type === "edge") {
+		const [src, tgt] = step.id.split("->");
+		const el = svg.querySelector(`[data-edge-source="${src}"][data-edge-target="${tgt}"]`) as SVGGElement | null;
+		if (el) {
+			el.style.transition = "none"; el.style.opacity = "0";
+			const path = el.querySelector("path") as SVGPathElement | null;
+			if (path) {
+				path.style.transition = "none";
+				try { const l = path.getTotalLength(); path.style.strokeDasharray = String(l); path.style.strokeDashoffset = String(l); } catch {}
+				const end = path.getAttribute("data-marker-end"); if (end) path.removeAttribute("marker-end");
+				const start = path.getAttribute("data-marker-start"); if (start) path.removeAttribute("marker-start");
+			}
+			const label = svg.querySelector(`[data-edge-label-source="${src}"][data-edge-label-target="${tgt}"]`) as SVGGElement | null;
+			if (label) { label.style.transition = "none"; label.style.opacity = "0"; }
+		}
+	}
 }
 
 type Mode = "edit" | "play";
@@ -162,21 +282,22 @@ export function Playground() {
 	const [renderTime, setRenderTime] = useState<number | null>(null);
 	const [ready, setReady] = useState(false);
 	const outputRef = useRef<HTMLDivElement>(null);
+	const domSvgRef = useRef<SVGSVGElement | null>(null);
 
 	const [mode, setMode] = useState<Mode>("edit");
-	const [steps, setSteps] = useState<Step[]>([]);
+	const [steps, setSteps] = useState<LayerStep[]>([]);
 	const [currentStep, setCurrentStep] = useState(-1);
 	const [playing, setPlaying] = useState(false);
-	const fullGraphRef = useRef<Record<string, unknown> | null>(null);
-	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+	const [speedIndex, setSpeedIndex] = useState(1);
+	const speedRef = useRef(SPEED_PRESETS[1]!.value);
+	const animControlRef = useRef<{ cancel: boolean }>({ cancel: false });
+	const stepsRef = useRef<LayerStep[]>([]);
+	stepsRef.current = steps;
 
 	useEffect(() => {
 		if (!window.crafterMermaid) {
 			const check = setInterval(() => {
-				if (window.crafterMermaid) {
-					clearInterval(check);
-					setReady(true);
-				}
+				if (window.crafterMermaid) { clearInterval(check); setReady(true); }
 			}, 100);
 			return () => clearInterval(check);
 		}
@@ -185,12 +306,9 @@ export function Playground() {
 
 	const renderDiagram = useCallback(() => {
 		if (!outputRef.current || !window.crafterMermaid || !ready) return;
-
 		const start = performance.now();
 		try {
-			const svg = window.crafterMermaid.render(source, {
-				theme: window.crafterMermaid.THEMES[themeName],
-			});
+			const svg = window.crafterMermaid.render(source, { theme: window.crafterMermaid.THEMES[themeName] });
 			outputRef.current.innerHTML = svg;
 			setError(null);
 			setRenderTime(performance.now() - start);
@@ -207,110 +325,105 @@ export function Playground() {
 	}, [renderDiagram, mode]);
 
 	const enterPlayMode = useCallback(() => {
-		if (!window.crafterMermaid || !ready) return;
-
+		if (!window.crafterMermaid || !ready || !outputRef.current) return;
 		const result = window.crafterMermaid.parse(source);
 		if (!result.ast) return;
-
 		const graph = window.crafterMermaid.layout(result.ast);
-		fullGraphRef.current = graph as Record<string, unknown>;
-
 		const fg = graph as { nodes: { id: string; label: string }[]; edges: { source: string; target: string; label?: string }[] };
-		const sourceLines = source.split("\n");
-		const decomposed = smartDecompose(fg, sourceLines);
+		const decomposed = smartDecompose(fg, source.split("\n"));
 		setSteps(decomposed);
 		setCurrentStep(-1);
 		setMode("play");
-		setTimeout(() => {
-			setPlaying(true);
-		}, 100);
-	}, [source, ready]);
+
+		const svg = window.crafterMermaid.renderToDOM(graph, {
+			theme: window.crafterMermaid.THEMES[themeName],
+			transparent: true,
+		});
+		svg.removeAttribute("width");
+		svg.removeAttribute("height");
+		svg.style.width = "100%";
+		svg.style.height = "100%";
+		svg.style.objectFit = "contain";
+		hideAllElements(svg);
+		outputRef.current.replaceChildren(svg);
+		domSvgRef.current = svg;
+
+		setTimeout(() => setPlaying(true), 150);
+	}, [source, ready, themeName]);
 
 	const exitPlayMode = useCallback(() => {
+		animControlRef.current.cancel = true;
 		setPlaying(false);
-		if (intervalRef.current) {
-			clearInterval(intervalRef.current);
-			intervalRef.current = null;
-		}
 		setMode("edit");
 		setCurrentStep(-1);
 		setSteps([]);
 	}, []);
 
-	const renderCurrentStep = useCallback(() => {
-		if (!outputRef.current || !fullGraphRef.current || steps.length === 0 || mode !== "play") return;
+	const seekToStep = useCallback((target: number) => {
+		if (!domSvgRef.current) return;
+		const svg = domSvgRef.current;
+		const allSteps = stepsRef.current;
+		const clamped = Math.max(-1, Math.min(target, allSteps.length - 1));
 
-		if (currentStep === -1) {
-			const fg = fullGraphRef.current as { width: number; height: number; groups: unknown[] };
-			const emptyGraph = { width: fg.width, height: fg.height, nodes: [], edges: [], groups: fg.groups };
-			outputRef.current.innerHTML = window.crafterMermaid.renderToString(emptyGraph, { theme: getThemeObject() });
-			return;
-		}
-
-		const svg = renderAtStep(fullGraphRef.current, steps, currentStep, getThemeObject());
-		outputRef.current.innerHTML = svg;
-	}, [currentStep, steps, getThemeObject, mode]);
-
-	useEffect(() => {
-		if (mode === "play") renderCurrentStep();
-	}, [renderCurrentStep, mode]);
-
-	useEffect(() => {
-		if (!playing) {
-			if (intervalRef.current) {
-				clearInterval(intervalRef.current);
-				intervalRef.current = null;
+		for (let i = 0; i < allSteps.length; i++) {
+			for (const item of allSteps[i]!.items) {
+				if (i <= clamped) revealInstantly(svg, item);
+				else hideInstantly(svg, item);
 			}
-			return;
+		}
+		setCurrentStep(clamped);
+	}, []);
+
+	useEffect(() => {
+		if (!playing || !domSvgRef.current) return;
+		const control = { cancel: false };
+		animControlRef.current = control;
+		const svg = domSvgRef.current;
+		let step = currentStep;
+		const allSteps = stepsRef.current;
+
+		async function animateItem(item: Step): Promise<void> {
+			const m = speedRef.current;
+			const nodeDur = Math.round(BASE_NODE * m);
+			const edgeDur = Math.round(BASE_EDGE * m);
+			const labelDur = Math.round(200 * m);
+			if (item.type === "node") {
+				await animateNodeIn(svg, item.id, nodeDur);
+			} else if (item.type === "edge") {
+				const [src, tgt] = item.id.split("->");
+				await animateEdgeIn(svg, src!, tgt!, edgeDur, labelDur);
+			}
 		}
 
-		intervalRef.current = setInterval(() => {
-			setCurrentStep((prev) => {
-				if (prev >= steps.length - 1) {
-					setPlaying(false);
-					return prev;
+		async function runPlayback() {
+			while (step < allSteps.length - 1 && !control.cancel) {
+				step++;
+				setCurrentStep(step);
+				const layerStep = allSteps[step]!;
+				await Promise.all(layerStep.items.map((item) => animateItem(item)));
+				if (!control.cancel) {
+					const gap = Math.round(BASE_GAP * speedRef.current);
+					await new Promise((r) => setTimeout(r, gap));
 				}
-				return prev + 1;
-			});
-		}, 600);
-
-		return () => {
-			if (intervalRef.current) {
-				clearInterval(intervalRef.current);
-				intervalRef.current = null;
 			}
-		};
-	}, [playing, steps.length]);
+			if (!control.cancel) setPlaying(false);
+		}
+
+		runPlayback();
+		return () => { control.cancel = true; };
+	}, [playing]);
 
 	const handlePlay = () => {
 		if (currentStep >= steps.length - 1) {
-			setCurrentStep(-1);
+			seekToStep(-1);
 			setTimeout(() => setPlaying(true), 50);
 		} else {
 			setPlaying(true);
 		}
 	};
 
-	const handlePause = () => setPlaying(false);
-
-	const handleStepForward = () => {
-		setPlaying(false);
-		setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
-	};
-
-	const handleStepBackward = () => {
-		setPlaying(false);
-		setCurrentStep((prev) => Math.max(prev - 1, -1));
-	};
-
-	const handleReset = () => {
-		setPlaying(false);
-		setCurrentStep(-1);
-	};
-
-	const currentStepInfo = currentStep >= 0 ? steps[currentStep] : null;
-	const highlightedLine = currentStepInfo?.sourceLine;
-
+	const currentLayerStep = currentStep >= 0 ? steps[currentStep] : null;
+	const highlightedLine = currentLayerStep?.items[0]?.sourceLine;
 	const sourceLines = source.split("\n");
 
 	return (
@@ -343,17 +456,10 @@ export function Playground() {
 									{renderTime.toFixed(1)}ms
 								</span>
 							)}
-							{mode === "play" && (
-								<>
-									{currentStepInfo && (
-										<span className="text-xs font-mono text-[var(--accent-cyan)] hidden sm:block">
-											{currentStepInfo.type === "node" ? "+" : "→"} {currentStepInfo.label}
-										</span>
-									)}
-									<span className="text-xs font-mono text-[var(--text-muted)]">
-										{currentStep + 1}/{steps.length}
-									</span>
-								</>
+							{mode === "play" && currentLayerStep && (
+								<span className="text-xs font-mono text-[var(--accent-cyan)] hidden sm:block">
+									{currentLayerStep.items[0]?.type === "node" ? "+" : "\u2192"} {currentLayerStep.label}
+								</span>
 							)}
 							<select
 								value={themeName}
@@ -411,6 +517,16 @@ export function Playground() {
 									className="w-full h-full flex items-center justify-center [&>svg]:max-w-full [&>svg]:max-h-full [&>svg]:w-auto [&>svg]:h-auto"
 								/>
 							)}
+							{mode === "play" && steps.length > 0 && (
+								<div className="absolute bottom-4 left-4 right-4">
+									<div className="h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+										<div
+											className="h-full bg-[var(--accent-blue)] rounded-full transition-all duration-300"
+											style={{ width: `${((Math.max(0, currentStep) + 1) / steps.length) * 100}%` }}
+										/>
+									</div>
+								</div>
+							)}
 						</div>
 					</div>
 
@@ -445,7 +561,7 @@ export function Playground() {
 									</button>
 
 									<button
-										onClick={handleReset}
+										onClick={() => { animControlRef.current.cancel = true; setPlaying(false); seekToStep(-1); }}
 										className="p-2 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
 										title="Reset"
 									>
@@ -455,7 +571,7 @@ export function Playground() {
 									</button>
 
 									<button
-										onClick={handleStepBackward}
+										onClick={() => { animControlRef.current.cancel = true; setPlaying(false); seekToStep(currentStep - 1); }}
 										className="p-2 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
 										title="Step backward"
 									>
@@ -467,7 +583,7 @@ export function Playground() {
 
 									{playing ? (
 										<button
-											onClick={handlePause}
+											onClick={() => { animControlRef.current.cancel = true; setPlaying(false); }}
 											className="p-2 rounded-md bg-[var(--accent-blue)] text-white hover:opacity-90 transition-opacity cursor-pointer"
 											title="Pause"
 										>
@@ -489,7 +605,7 @@ export function Playground() {
 									)}
 
 									<button
-										onClick={handleStepForward}
+										onClick={() => { animControlRef.current.cancel = true; setPlaying(false); seekToStep(currentStep + 1); }}
 										className="p-2 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
 										title="Step forward"
 									>
@@ -500,21 +616,24 @@ export function Playground() {
 									</button>
 								</div>
 
-								<div className="flex-1 mx-4">
-									<div className="relative h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-										<div
-											className="absolute left-0 top-0 h-full bg-[var(--accent-blue)] rounded-full transition-all duration-300"
-											style={{
-												width: steps.length > 0
-													? `${((currentStep + 1) / steps.length) * 100}%`
-													: "0%",
-											}}
-										/>
-									</div>
+								<div className="flex items-center gap-0.5 px-1 py-0.5 rounded-md bg-[var(--bg-tertiary)] border border-[var(--border)]">
+									{SPEED_PRESETS.map((preset, i) => (
+										<button
+											key={preset.label}
+											onClick={() => { setSpeedIndex(i); speedRef.current = preset.value; }}
+											className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer ${
+												speedIndex === i
+													? "bg-[var(--accent-blue)] text-white"
+													: "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+											}`}
+										>
+											{preset.label}
+										</button>
+									))}
 								</div>
 
 								<span className="text-xs font-mono text-[var(--text-muted)] tabular-nums">
-									{currentStep >= 0 ? steps[currentStep]?.type : "ready"}
+									{Math.max(0, currentStep + 1)}/{steps.length}
 								</span>
 							</>
 						)}
