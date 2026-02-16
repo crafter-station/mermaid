@@ -872,9 +872,9 @@ function PlaygroundContent() {
 		svg.style.height = "100%";
 		svg.style.objectFit = "contain";
 
-		hideAllElements(svg);
 		svgRef.current.replaceChildren(svg);
 		domSvgRef.current = svg;
+		hideAllElements(svg);
 
 		setTimeout(() => setPlaying(true), 150);
 	}, [source, ready, clearInteractions, themeName]);

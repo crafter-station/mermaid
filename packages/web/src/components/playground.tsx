@@ -344,9 +344,9 @@ export function Playground() {
 		svg.style.width = "100%";
 		svg.style.height = "100%";
 		svg.style.objectFit = "contain";
-		hideAllElements(svg);
 		outputRef.current.replaceChildren(svg);
 		domSvgRef.current = svg;
+		hideAllElements(svg);
 
 		setTimeout(() => setPlaying(true), 150);
 	}, [source, ready, themeName]);
