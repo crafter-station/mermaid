@@ -756,7 +756,7 @@ function renderEdge(edge: PositionedEdge, _ctx: RenderContext, options: DOMRende
 	return g;
 }
 
-function renderEdgeLabel(edge: PositionedEdge, ctx: RenderContext, edgeIndex?: number): SVGElement {
+function renderEdgeLabel(edge: PositionedEdge, _ctx: RenderContext, edgeIndex?: number): SVGElement {
 	const g = createElement("g");
 
 	if (!edge.label || !edge.labelPosition) return g;
