@@ -3,17 +3,18 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { ThemeProvider } from "next-themes";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { Analytics } from "@vercel/analytics/react";
 import { DiagramThemeProvider } from "@/components/theme-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
 	title: "@crafter/mermaid — Ultra-lightweight Mermaid Engine",
 	description:
-		"Zero-dependency, 16.8KB gzipped Mermaid rendering engine. Parse, lay out, and render diagrams with a sync API, 32 themes, and full interactivity.",
+		"Zero-dependency, 30.5KB gzipped Mermaid rendering engine. Parse, lay out, and render diagrams with a sync API, 32 themes, and full interactivity.",
 	openGraph: {
 		title: "@crafter/mermaid — Ultra-lightweight Mermaid Engine",
 		description:
-			"Zero-dependency, 16.8KB gzipped Mermaid rendering engine with sync API, 32 themes, and interactivity.",
+			"Zero-dependency, 30.5KB gzipped Mermaid rendering engine with sync API, 32 themes, and interactivity.",
 		url: "https://mermaid.crafter.run",
 		siteName: "@crafter/mermaid",
 		type: "website",
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
 		card: "summary_large_image",
 		title: "@crafter/mermaid — Ultra-lightweight Mermaid Engine",
 		description:
-			"Zero-dependency, 16.8KB gzipped Mermaid rendering engine.",
+			"Zero-dependency, 30.5KB gzipped Mermaid rendering engine.",
 	},
 };
 
@@ -45,6 +46,7 @@ export default function RootLayout({
 						</DiagramThemeProvider>
 					</ThemeProvider>
 				</NuqsAdapter>
+				<Analytics />
 			</body>
 		</html>
 	);
