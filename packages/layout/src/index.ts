@@ -223,8 +223,8 @@ function layoutSubgraphsHierarchically(
 	const innerLayouts = new Map<string, InnerLayout>();
 	const sgIds = new Set(subgraphs.map((sg) => sg.id));
 
-	const groupPad = 16;
-	const labelHeight = 24;
+	const groupPad = 24;
+	const labelHeight = 28;
 
 	for (const sg of subgraphs) {
 		const innerNodeIds = new Set(collectAllNodeIds(sg));
@@ -369,6 +369,15 @@ function layoutFlatDiagram(
 
 	const nodeMap = new Map(positionedNodes.map((n) => [n.id, n]));
 
+	const fanOut = new Map<string, string[]>();
+	const fanIn = new Map<string, string[]>();
+	for (const edge of edges) {
+		if (!fanOut.has(edge.source)) fanOut.set(edge.source, []);
+		fanOut.get(edge.source)!.push(edge.target);
+		if (!fanIn.has(edge.target)) fanIn.set(edge.target, []);
+		fanIn.get(edge.target)!.push(edge.source);
+	}
+
 	const positionedEdges: PositionedEdge[] = edges.map((edge) => {
 		const sourceNode = nodeMap.get(edge.source);
 		const targetNode = nodeMap.get(edge.target);
@@ -405,6 +414,19 @@ function layoutFlatDiagram(
 			height: targetNode.height,
 		};
 
+		const portOffsets: { sourceOffset?: number; targetOffset?: number } = {};
+		const outSiblings = fanOut.get(edge.source) ?? [];
+		if (outSiblings.length > 1) {
+			const idx = outSiblings.indexOf(edge.target);
+			const spacing = Math.min(sourceNode.width * 0.6, outSiblings.length * 16) / (outSiblings.length - 1);
+			const totalSpan = spacing * (outSiblings.length - 1);
+			portOffsets.sourceOffset = -totalSpan / 2 + idx * spacing;
+		}
+		const inSiblings = fanIn.get(edge.target) ?? [];
+		const fanInInfo = inSiblings.length > 1
+			? { index: inSiblings.indexOf(edge.source), total: inSiblings.length }
+			: undefined;
+
 		const points = routeEdge(
 			sourceCentered,
 			targetCentered,
@@ -412,6 +434,8 @@ function layoutFlatDiagram(
 			sourceNode.shape,
 			targetNode.shape,
 			dir,
+			portOffsets,
+			fanInInfo,
 		);
 
 		return {
@@ -518,8 +542,16 @@ function layoutHierarchicalDiagram(
 		};
 	}
 
-	const { innerLayouts, outerNodes, outerEdges, sgIds } =
+	const { innerLayouts, outerNodes, outerEdges, bridgeEdges, sgIds } =
 		layoutSubgraphsHierarchically(nodes, edges, subgraphs, options, direction);
+
+	const bridgeCompanionKeys = new Set<string>();
+	for (const be of bridgeEdges) {
+		const srcOwner = findOwningSubgraph(be.source, subgraphs);
+		const tgtOwner = findOwningSubgraph(be.target, subgraphs);
+		if (srcOwner && !sgIds.has(be.target)) bridgeCompanionKeys.add(`${srcOwner}->${be.target}`);
+		if (tgtOwner && !sgIds.has(be.source)) bridgeCompanionKeys.add(`${be.source}->${tgtOwner}`);
+	}
 
 	const outerFlat = layoutFlatDiagram(outerNodes, outerEdges, options, direction);
 
@@ -527,8 +559,8 @@ function layoutHierarchicalDiagram(
 	const allPositionedEdges: PositionedEdge[] = [];
 	const allGroups: PositionedGroup[] = [];
 
-	const groupPad = 16;
-	const labelHeight = 24;
+	const groupPad = 24;
+	const labelHeight = 28;
 
 	for (const sg of subgraphs) {
 		const megaNode = outerFlat.nodes.find((n) => n.id === sg.id);
@@ -574,6 +606,47 @@ function layoutHierarchicalDiagram(
 		}
 	}
 
+	const nodeMap = new Map(allPositionedNodes.map((n) => [n.id, n]));
+
+	const outerNodeIds = new Set(
+		outerFlat.nodes.filter((n) => !n.inlineStyle?.__megaNode).map((n) => n.id),
+	);
+
+	const outerToInnerTargets = new Map<string, string[]>();
+	for (const be of bridgeEdges) {
+		const srcIsOuter = outerNodeIds.has(be.source);
+		const tgtIsOuter = outerNodeIds.has(be.target);
+		if (!srcIsOuter && !tgtIsOuter) continue;
+		const outerNodeId = srcIsOuter ? be.source : be.target;
+		const innerNodeId = srcIsOuter ? be.target : be.source;
+		if (!outerToInnerTargets.has(outerNodeId)) {
+			outerToInnerTargets.set(outerNodeId, []);
+		}
+		outerToInnerTargets.get(outerNodeId)!.push(innerNodeId);
+	}
+
+	for (const [outerNodeId, innerNodeIds] of outerToInnerTargets) {
+		const outerNode = nodeMap.get(outerNodeId);
+		if (!outerNode) continue;
+
+		const innerCxValues = innerNodeIds
+			.map((id) => nodeMap.get(id))
+			.filter((n) => n != null)
+			.map((n) => n.x + n.width / 2);
+		if (innerCxValues.length === 0) continue;
+
+		const targetCx =
+			innerCxValues.length === 1
+				? innerCxValues[0]!
+				: (Math.min(...innerCxValues) + Math.max(...innerCxValues)) / 2;
+
+		const outerCx = outerNode.x + outerNode.width / 2;
+		const shift = targetCx - outerCx;
+		if (Math.abs(shift) > 1) {
+			outerNode.x += shift;
+		}
+	}
+
 	const groupNodeMap = new Map(
 		allGroups.map((g) => [
 			g.id,
@@ -584,60 +657,122 @@ function layoutHierarchicalDiagram(
 	for (const e of outerFlat.edges) {
 		const srcIsMega = sgIds.has(e.source);
 		const tgtIsMega = sgIds.has(e.target);
-		if (srcIsMega || tgtIsMega) continue;
-		allPositionedEdges.push(e);
-	}
+		if (srcIsMega && tgtIsMega) continue;
+		if (bridgeCompanionKeys.has(`${e.source}->${e.target}`)) continue;
 
-	const nodeMap = new Map(allPositionedNodes.map((n) => [n.id, n]));
+		function resolveRect(id: string, isMega: boolean) {
+			if (isMega) {
+				const g = groupNodeMap.get(id);
+				if (!g) return null;
+				return { x: g.x + g.width / 2, y: g.y + g.height / 2, width: g.width, height: g.height, shape: "rectangle" as const };
+			}
+			const n = nodeMap.get(id);
+			if (!n) return null;
+			return { x: n.x + n.width / 2, y: n.y + n.height / 2, width: n.width, height: n.height, shape: n.shape };
+		}
 
-	const handledOuterEdges = new Set<string>();
-	for (const e of outerFlat.edges) {
-		const srcIsMega = sgIds.has(e.source);
-		const tgtIsMega = sgIds.has(e.target);
-		if (!srcIsMega && !tgtIsMega) continue;
-
-		const realSource = e.source;
-		const realTarget = e.target;
-
-		const srcNode = nodeMap.get(realSource);
-		const tgtNode = nodeMap.get(realTarget);
-		const srcGroup = groupNodeMap.get(realSource);
-		const tgtGroup = groupNodeMap.get(realTarget);
-
-		const srcRect = srcNode
-			? { x: srcNode.x + srcNode.width / 2, y: srcNode.y + srcNode.height / 2, width: srcNode.width, height: srcNode.height }
-			: srcGroup
-				? { x: srcGroup.x + srcGroup.width / 2, y: srcGroup.y + srcGroup.height / 2, width: srcGroup.width, height: srcGroup.height }
-				: null;
-
-		const tgtRect = tgtNode
-			? { x: tgtNode.x + tgtNode.width / 2, y: tgtNode.y + tgtNode.height / 2, width: tgtNode.width, height: tgtNode.height }
-			: tgtGroup
-				? { x: tgtGroup.x + tgtGroup.width / 2, y: tgtGroup.y + tgtGroup.height / 2, width: tgtGroup.width, height: tgtGroup.height }
-				: null;
-
-		if (!srcRect || !tgtRect) continue;
-
-		const edgeKey = `${realSource}->${realTarget}`;
-		if (handledOuterEdges.has(edgeKey)) continue;
-		handledOuterEdges.add(edgeKey);
+		const src = resolveRect(e.source, srcIsMega);
+		const tgt = resolveRect(e.target, tgtIsMega);
+		if (!src || !tgt) continue;
 
 		const points = routeEdge(
-			srcRect,
-			tgtRect,
+			src, tgt,
+			[{ x: src.x, y: src.y }, { x: tgt.x, y: tgt.y }],
+			src.shape, tgt.shape, direction,
+		);
+		allPositionedEdges.push({
+			...e, points,
+			labelPosition: e.label ? computeLabelPosition(points) : undefined,
+		});
+	}
+
+	const bridgeFanOut = new Map<string, string[]>();
+	const bridgeFanIn = new Map<string, string[]>();
+	for (const be of bridgeEdges) {
+		if (!bridgeFanOut.has(be.source)) bridgeFanOut.set(be.source, []);
+		bridgeFanOut.get(be.source)!.push(be.target);
+		if (!bridgeFanIn.has(be.target)) bridgeFanIn.set(be.target, []);
+		bridgeFanIn.get(be.target)!.push(be.source);
+	}
+
+	const handledBridgeEdges = new Set<string>();
+	for (const be of bridgeEdges) {
+		const edgeKey = `${be.source}->${be.target}`;
+		if (handledBridgeEdges.has(edgeKey)) continue;
+		handledBridgeEdges.add(edgeKey);
+
+		const srcNode = nodeMap.get(be.source);
+		const tgtNode = nodeMap.get(be.target);
+		if (!srcNode || !tgtNode) continue;
+
+		const srcRect = {
+			x: srcNode.x + srcNode.width / 2,
+			y: srcNode.y + srcNode.height / 2,
+			width: srcNode.width, height: srcNode.height,
+		};
+		const tgtRect = {
+			x: tgtNode.x + tgtNode.width / 2,
+			y: tgtNode.y + tgtNode.height / 2,
+			width: tgtNode.width, height: tgtNode.height,
+		};
+
+		const bridgePortOffsets: { sourceOffset?: number; targetOffset?: number } = {};
+		const srcSiblings = bridgeFanOut.get(be.source) ?? [];
+		if (srcSiblings.length > 1) {
+			const idx = srcSiblings.indexOf(be.target);
+			const spacing = Math.min(srcNode.width * 0.6, srcSiblings.length * 16) / (srcSiblings.length - 1);
+			const totalSpan = spacing * (srcSiblings.length - 1);
+			bridgePortOffsets.sourceOffset = -totalSpan / 2 + idx * spacing;
+		}
+		const tgtSiblings = bridgeFanIn.get(be.target) ?? [];
+		const bridgeFanInInfo = tgtSiblings.length > 1
+			? { index: tgtSiblings.indexOf(be.source), total: tgtSiblings.length }
+			: undefined;
+
+		const points = routeEdge(
+			srcRect, tgtRect,
 			[{ x: srcRect.x, y: srcRect.y }, { x: tgtRect.x, y: tgtRect.y }],
-			srcNode?.shape ?? "rectangle",
-			tgtNode?.shape ?? "rectangle",
-			direction,
+			srcNode.shape, tgtNode.shape, direction,
+			bridgePortOffsets,
+			bridgeFanInInfo,
 		);
 
 		allPositionedEdges.push({
-			source: realSource,
-			target: realTarget,
-			label: e.label,
-			style: e.style,
-			hasArrowStart: e.hasArrowStart,
-			hasArrowEnd: e.hasArrowEnd,
+			source: be.source, target: be.target,
+			label: be.label, style: be.style,
+			hasArrowStart: be.hasArrowStart, hasArrowEnd: be.hasArrowEnd,
+			points,
+			labelPosition: be.label ? computeLabelPosition(points) : undefined,
+			inlineStyle: be.inlineStyle,
+		});
+	}
+
+	for (const e of outerFlat.edges) {
+		const srcIsMega = sgIds.has(e.source);
+		const tgtIsMega = sgIds.has(e.target);
+		if (!srcIsMega || !tgtIsMega) continue;
+
+		const srcGroup = groupNodeMap.get(e.source);
+		const tgtGroup = groupNodeMap.get(e.target);
+		if (!srcGroup || !tgtGroup) continue;
+
+		const edgeKey = `${e.source}->${e.target}`;
+		if (handledBridgeEdges.has(edgeKey)) continue;
+		handledBridgeEdges.add(edgeKey);
+
+		const srcRect = { x: srcGroup.x + srcGroup.width / 2, y: srcGroup.y + srcGroup.height / 2, width: srcGroup.width, height: srcGroup.height };
+		const tgtRect = { x: tgtGroup.x + tgtGroup.width / 2, y: tgtGroup.y + tgtGroup.height / 2, width: tgtGroup.width, height: tgtGroup.height };
+
+		const points = routeEdge(
+			srcRect, tgtRect,
+			[{ x: srcRect.x, y: srcRect.y }, { x: tgtRect.x, y: tgtRect.y }],
+			"rectangle", "rectangle", direction,
+		);
+
+		allPositionedEdges.push({
+			source: e.source, target: e.target,
+			label: e.label, style: e.style,
+			hasArrowStart: e.hasArrowStart, hasArrowEnd: e.hasArrowEnd,
 			points,
 			labelPosition: e.label ? computeLabelPosition(points) : undefined,
 			inlineStyle: e.inlineStyle,
