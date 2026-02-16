@@ -400,6 +400,106 @@ function balanceGraph<N, E>(
 	return result;
 }
 
+function packLayers<N, E>(
+	graph: DirectedGraph<N, E>,
+	layerArrays: string[][],
+	positions: Map<string, number>,
+	nodeSpacing: number,
+	isHoriz: boolean,
+): Map<string, number> {
+	const result = new Map(positions);
+
+	for (const layer of layerArrays) {
+		if (layer.length < 2) continue;
+
+		const sorted = layer
+			.map((nodeId) => ({
+				nodeId,
+				pos: result.get(nodeId)!,
+			}))
+			.sort((a, b) => a.pos - b.pos);
+
+		for (let i = 1; i < sorted.length; i++) {
+			const prevNode = graph.getNode(sorted[i - 1].nodeId);
+			const currNode = graph.getNode(sorted[i].nodeId);
+			if (!prevNode || !currNode) continue;
+
+			const prevSize = isHoriz ? prevNode.height : prevNode.width;
+			const currSize = isHoriz ? currNode.height : currNode.width;
+			const minPos =
+				sorted[i - 1].pos + prevSize / 2 + nodeSpacing + currSize / 2;
+
+			if (sorted[i].pos > minPos) {
+				const shift = sorted[i].pos - minPos;
+				sorted[i].pos = minPos;
+				result.set(sorted[i].nodeId, minPos);
+
+				for (let j = i + 1; j < sorted.length; j++) {
+					sorted[j].pos -= shift;
+					result.set(sorted[j].nodeId, sorted[j].pos);
+				}
+			}
+		}
+	}
+
+	return result;
+}
+
+function centerParentsOverChildren<N, E>(
+	graph: DirectedGraph<N, E>,
+	layerArrays: string[][],
+	positions: Map<string, number>,
+	nodeSpacing: number,
+	isHoriz: boolean,
+): Map<string, number> {
+	const result = new Map(positions);
+	const isVirtual = (id: string) => id.startsWith("__virtual_");
+
+	for (let iter = 0; iter < 4; iter++) {
+		for (let li = 0; li < layerArrays.length; li++) {
+			const layer = layerArrays[li];
+			for (const nodeId of layer) {
+				if (isVirtual(nodeId)) continue;
+				const succs = graph.successors(nodeId);
+				const nextLayer = layerArrays[li + 1];
+				if (!nextLayer) continue;
+				const children = succs.filter(
+					(s) => nextLayer.includes(s) && !isVirtual(s),
+				);
+				if (children.length < 2) continue;
+
+				const childPositions = children.map((c) => result.get(c)!);
+				const childCenter =
+					(Math.min(...childPositions) + Math.max(...childPositions)) / 2;
+				result.set(nodeId, childCenter);
+			}
+		}
+
+		for (let li = layerArrays.length - 1; li >= 0; li--) {
+			const layer = layerArrays[li];
+			for (const nodeId of layer) {
+				if (isVirtual(nodeId)) continue;
+				const preds = graph.predecessors(nodeId);
+				const prevLayer = layerArrays[li - 1];
+				if (!prevLayer) continue;
+				const parents = preds.filter(
+					(p) => prevLayer.includes(p) && !isVirtual(p),
+				);
+				if (parents.length < 2) continue;
+
+				const parentPositions = parents.map((p) => result.get(p)!);
+				const parentCenter =
+					(Math.min(...parentPositions) + Math.max(...parentPositions)) / 2;
+				result.set(nodeId, parentCenter);
+			}
+		}
+
+		resolveCollisions(graph, layerArrays, result, nodeSpacing, isHoriz);
+	}
+
+	return result;
+}
+
 function normalizePositions(
 	positions: Map<string, number>,
 	padding: number,
@@ -463,7 +563,7 @@ export function assignCoordinates<N, E>(
 		isHoriz,
 	);
 
-	const finalPositions = balanceGraph(
+	const balanced = balanceGraph(
 		graph,
 		layerArrays,
 		subtreeCentered,
@@ -471,7 +571,23 @@ export function assignCoordinates<N, E>(
 		isHoriz,
 	);
 
-	const normalizedPositions = normalizePositions(finalPositions, padding);
+	const packed = packLayers(
+		graph,
+		layerArrays,
+		balanced,
+		nodeSpacing,
+		isHoriz,
+	);
+
+	const centered = centerParentsOverChildren(
+		graph,
+		layerArrays,
+		packed,
+		nodeSpacing,
+		isHoriz,
+	);
+
+	const normalizedPositions = normalizePositions(centered, padding);
 
 	const positions = new Map<string, { x: number; y: number }>();
 

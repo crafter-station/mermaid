@@ -83,7 +83,7 @@ export function layoutSequenceDiagram(
 		positionedEdges.unshift({
 			source: participant.id,
 			target: participant.id,
-			style: "dotted",
+			style: "solid",
 			hasArrowStart: false,
 			hasArrowEnd: false,
 			points: [
