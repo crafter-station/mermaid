@@ -4,6 +4,51 @@ function isHorizontal(direction: Direction): boolean {
 	return direction === "LR" || direction === "RL";
 }
 
+function routeFanIn(
+	start: Point,
+	source: { x: number; y: number; width: number; height: number },
+	target: { x: number; y: number; width: number; height: number },
+	direction: Direction,
+	fanIn: { index: number; total: number },
+): Point[] {
+	const horiz = isHorizontal(direction);
+	const hw = target.width / 2;
+	const hh = target.height / 2;
+	const center = Math.floor(fanIn.total / 2);
+	const isCenter = fanIn.index === center && fanIn.total % 2 === 1;
+
+	if (isCenter) {
+		if (horiz) {
+			const end = { x: target.x - hw, y: start.y };
+			return [start, end];
+		}
+		const end = { x: start.x, y: target.y - hh };
+		return [start, end];
+	}
+
+	const isLeft = fanIn.index < center;
+
+	if (!horiz) {
+		const end = isLeft
+			? { x: target.x - hw, y: target.y }
+			: { x: target.x + hw, y: target.y };
+		return [
+			start,
+			{ x: start.x, y: end.y },
+			end,
+		];
+	}
+
+	const end = isLeft
+		? { x: target.x, y: target.y - hh }
+		: { x: target.x, y: target.y + hh };
+	return [
+		start,
+		{ x: end.x, y: start.y },
+		end,
+	];
+}
+
 export function snapToOrthogonal(points: Point[], direction: Direction): Point[] {
 	if (points.length < 2) return points;
 
@@ -132,6 +177,44 @@ export function clipToNodeBoundary(
 	}
 }
 
+function portBasedEndpoints(
+	source: { x: number; y: number; width: number; height: number },
+	target: { x: number; y: number; width: number; height: number },
+	direction: Direction,
+): { start: Point; end: Point } | null {
+	const isHoriz = isHorizontal(direction);
+	const hw_s = source.width / 2;
+	const hh_s = source.height / 2;
+	const hw_t = target.width / 2;
+	const hh_t = target.height / 2;
+
+	if (!isHoriz) {
+		const goingDown = target.y > source.y;
+		if (goingDown) {
+			return {
+				start: { x: source.x, y: source.y + hh_s },
+				end: { x: target.x, y: target.y - hh_t },
+			};
+		}
+		return {
+			start: { x: source.x, y: source.y - hh_s },
+			end: { x: target.x, y: target.y + hh_t },
+		};
+	}
+
+	const goingRight = target.x > source.x;
+	if (goingRight) {
+		return {
+			start: { x: source.x + hw_s, y: source.y },
+			end: { x: target.x - hw_t, y: target.y },
+		};
+	}
+	return {
+		start: { x: source.x - hw_s, y: source.y },
+		end: { x: target.x + hw_t, y: target.y },
+	};
+}
+
 export function routeEdge(
 	source: { x: number; y: number; width: number; height: number },
 	target: { x: number; y: number; width: number; height: number },
@@ -139,7 +222,52 @@ export function routeEdge(
 	sourceShape: string,
 	targetShape: string,
 	direction: Direction,
+	portOffsets?: { sourceOffset?: number; targetOffset?: number },
+	fanIn?: { index: number; total: number },
 ): Point[] {
+	const needsAngleClip = (s: string) =>
+		s === "circle" || s === "doublecircle" || s === "diamond" ||
+		s === "rhombus" || s === "hexagon" || s === "state-start" || s === "state-end";
+
+	const usePortBased = !needsAngleClip(sourceShape) && !needsAngleClip(targetShape);
+
+	if (usePortBased) {
+		const ports = portBasedEndpoints(source, target, direction);
+		if (ports) {
+			const start = { ...ports.start };
+			const end = { ...ports.end };
+			const horiz = isHorizontal(direction);
+
+			if (portOffsets?.sourceOffset) {
+				if (horiz) start.y += portOffsets.sourceOffset;
+				else start.x += portOffsets.sourceOffset;
+			}
+
+			if (fanIn && fanIn.total > 1) {
+				return routeFanIn(start, source, target, direction, fanIn);
+			}
+
+			if (portOffsets?.targetOffset) {
+				if (horiz) end.y += portOffsets.targetOffset;
+				else end.x += portOffsets.targetOffset;
+			}
+
+			if (horiz) {
+				if (Math.abs(start.y - end.y) < 1) {
+					return [start, end];
+				}
+				const midX = (start.x + end.x) / 2;
+				return [start, { x: midX, y: start.y }, { x: midX, y: end.y }, end];
+			}
+
+			if (Math.abs(start.x - end.x) < 1) {
+				return [start, end];
+			}
+			const midY = (start.y + end.y) / 2;
+			return [start, { x: start.x, y: midY }, { x: end.x, y: midY }, end];
+		}
+	}
+
 	const points = snapToOrthogonal(waypoints, direction);
 
 	if (points.length < 2) return points;
