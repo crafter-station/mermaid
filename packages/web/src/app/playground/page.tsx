@@ -6,6 +6,7 @@ import { useQueryState, parseAsString } from "nuqs";
 import Script from "next/script";
 import { codeToHtml } from "shiki";
 import { useDiagramTheme, THEME_NAMES, type ThemeName } from "@/components/theme-context";
+import { ChatPanel, type ChatPanelRef } from "@/components/chat/chat-panel";
 
 const PRESETS: { label: string; category: string; source: string }[] = [
 	{
@@ -674,6 +675,8 @@ function PlaygroundContent() {
 	const speedRef = useRef(SPEED_PRESETS[1]!.value);
 	const animControlRef = useRef<{ cancel: boolean }>({ cancel: false });
 
+	const [showChat, setShowChat] = useState(false);
+	const chatPanelRef = useRef<ChatPanelRef>(null);
 	const [interactions, setInteractions] = useState<Set<string>>(new Set());
 	const cleanupsRef = useRef<Map<string, () => void>>(new Map());
 
@@ -688,6 +691,23 @@ function PlaygroundContent() {
 	stepsRef.current = steps;
 
 	useEffect(() => setMounted(true), []);
+
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if ((e.metaKey || e.ctrlKey) && e.key === "i") {
+				e.preventDefault();
+				setShowChat((prev) => {
+					const next = !prev;
+					if (next) {
+						setTimeout(() => chatPanelRef.current?.focusInput(), 0);
+					}
+					return next;
+				});
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, []);
 
 	useEffect(() => {
 		const preset = PRESETS.find((p) => p.category === tab);
@@ -992,6 +1012,26 @@ function PlaygroundContent() {
 							))}
 						</select>
 						<button
+							onClick={() => {
+								const next = !showChat;
+								setShowChat(next);
+								if (next) {
+									setTimeout(() => chatPanelRef.current?.focusInput(), 0);
+								}
+							}}
+							className={`px-2 h-7 flex items-center justify-center gap-1 rounded-md border text-[11px] font-mono transition-colors cursor-pointer ${
+								showChat
+									? "bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)] border-[var(--accent-cyan)]/30"
+									: "border-[var(--border)] hover:border-[var(--border-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+							}`}
+						>
+							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+								<path d="M12 2a8 8 0 0 0-8 8c0 3.4 2.1 6.3 5.2 7.4.4.1.6.5.5.9l-.4 1.7a.5.5 0 0 0 .7.6l2.5-1.2c.2-.1.5-.1.7 0A8 8 0 1 0 12 2z"/>
+								<path d="M8 10h.01M12 10h.01M16 10h.01"/>
+							</svg>
+							AI
+						</button>
+						<button
 							onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
 							className="w-7 h-7 flex items-center justify-center rounded-md border border-[var(--border)] hover:border-[var(--border-hover)] transition-colors cursor-pointer"
 						>
@@ -1231,6 +1271,12 @@ function PlaygroundContent() {
 							</div>
 						)}
 					</div>
+
+					{showChat && (
+						<div className="w-[350px] shrink-0">
+							<ChatPanel ref={chatPanelRef} source={source} onSourceChange={setSource} />
+						</div>
+					)}
 				</div>
 
 				{mode === "edit" && (
