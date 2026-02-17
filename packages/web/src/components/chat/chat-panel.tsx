@@ -268,7 +268,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatP
   return (
     <div className="flex flex-col h-full border-l border-[var(--border)] bg-[var(--bg-primary)]">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 h-8 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
+      <div className="flex items-center justify-between px-3 h-9 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
         <div className="relative">
           <select
             value={modelId}

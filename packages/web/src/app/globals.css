@@ -132,12 +132,12 @@ body {
 
 .shiki,
 .shiki span {
-	color: var(--shiki-light);
-	background-color: transparent;
+	color: var(--shiki-light) !important;
+	background-color: transparent !important;
 }
 
 .dark .shiki,
 .dark .shiki span {
-	color: var(--shiki-dark);
-	background-color: transparent;
+	color: var(--shiki-dark) !important;
+	background-color: transparent !important;
 }
