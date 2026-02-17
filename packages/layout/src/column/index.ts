@@ -44,16 +44,34 @@ export function layoutSequenceDiagram(
 	const positionedEdges: PositionedEdge[] = [];
 	let currentY = padding + actorHeight + layerSpacing;
 
+	const selfLoopWidth = 40;
+	const selfLoopHeight = 30;
+
 	for (const item of ast.messages) {
 		if ("from" in item && "to" in item) {
 			const message = item;
 			const sourceX = columnPositions.get(message.from) ?? padding;
 			const targetX = columnPositions.get(message.to) ?? padding;
 
-			const points: Point[] = [
-				{ x: sourceX + columnWidth / 2, y: currentY },
-				{ x: targetX + columnWidth / 2, y: currentY },
-			];
+			const isSelfMessage = message.from === message.to;
+
+			let points: Point[];
+			if (isSelfMessage) {
+				const cx = sourceX + columnWidth / 2;
+				points = [
+					{ x: cx, y: currentY },
+					{ x: cx + selfLoopWidth, y: currentY },
+					{ x: cx + selfLoopWidth, y: currentY + selfLoopHeight },
+					{ x: cx, y: currentY + selfLoopHeight },
+				];
+				currentY += selfLoopHeight + layerSpacing / 2;
+			} else {
+				points = [
+					{ x: sourceX + columnWidth / 2, y: currentY },
+					{ x: targetX + columnWidth / 2, y: currentY },
+				];
+				currentY += layerSpacing;
+			}
 
 			positionedEdges.push({
 				source: message.from,
@@ -65,8 +83,6 @@ export function layoutSequenceDiagram(
 				points,
 				labelPosition: computeLabelPosition(points),
 			});
-
-			currentY += layerSpacing;
 		}
 	}
 
