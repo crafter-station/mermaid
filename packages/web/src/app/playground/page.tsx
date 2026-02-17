@@ -4,7 +4,6 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { useQueryState, parseAsString } from "nuqs";
 import Script from "next/script";
-import { codeToHtml } from "shiki";
 import { useDiagramTheme, THEME_NAMES, type ThemeName } from "@/components/theme-context";
 import { ChatPanel, type ChatPanelRef } from "@/components/chat/chat-panel";
 
@@ -683,14 +682,23 @@ function PlaygroundContent() {
 	const [nodeCount, setNodeCount] = useState(0);
 	const [edgeCount, setEdgeCount] = useState(0);
 	const [copied, setCopied] = useState(false);
-	const [highlightedHtml, setHighlightedHtml] = useState("");
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
-	const highlightRef = useRef<HTMLDivElement>(null);
+	const [shared, setShared] = useState(false);
 
 	const stepsRef = useRef<LayerStep[]>([]);
 	stepsRef.current = steps;
 
-	useEffect(() => setMounted(true), []);
+	useEffect(() => {
+		setMounted(true);
+		const params = new URLSearchParams(window.location.search);
+		const encoded = params.get("source");
+		if (encoded) {
+			try {
+				const decoded = decodeURIComponent(atob(encoded));
+				setSource(decoded);
+			} catch {}
+		}
+	}, []);
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -715,21 +723,6 @@ function PlaygroundContent() {
 			setSource(preset.source);
 		}
 	}, [tab]);
-
-	useEffect(() => {
-		codeToHtml(source, {
-			lang: "mermaid",
-			themes: { light: "github-light", dark: "tokyo-night" },
-			defaultColor: false,
-		}).then(setHighlightedHtml).catch(() => {});
-	}, [source]);
-
-	const syncScroll = useCallback(() => {
-		if (textareaRef.current && highlightRef.current) {
-			highlightRef.current.scrollTop = textareaRef.current.scrollTop;
-			highlightRef.current.scrollLeft = textareaRef.current.scrollLeft;
-		}
-	}, []);
 
 	const handleScriptReady = useCallback(() => {
 		setReady(true);
@@ -967,6 +960,14 @@ function PlaygroundContent() {
 		URL.revokeObjectURL(url);
 	}, [svgCode]);
 
+	const handleShare = useCallback(async () => {
+		const url = new URL(window.location.href);
+		url.searchParams.set("source", btoa(encodeURIComponent(source)));
+		await navigator.clipboard.writeText(url.toString());
+		setShared(true);
+		setTimeout(() => setShared(false), 2000);
+	}, [source]);
+
 	const currentLayerStep = currentStep >= 0 ? steps[currentStep] : null;
 	const highlightedLine = currentLayerStep?.items[0]?.sourceLine;
 	const sourceLines = source.split("\n");
@@ -978,12 +979,11 @@ function PlaygroundContent() {
 			<Script src="/crafter-mermaid.browser.global.js" strategy="afterInteractive" onReady={handleScriptReady} />
 			<div className="h-screen flex flex-col bg-[var(--bg-primary)]">
 				<header className="flex items-center justify-between px-4 h-12 border-b border-[var(--border)] bg-[var(--bg-secondary)] shrink-0">
-					<div className="flex items-center gap-4">
-						<a href="/" className="font-mono text-sm font-semibold tracking-tight hover:text-[var(--accent-cyan)] transition-colors">
-							@crafter/mermaid
+					<div className="flex items-center gap-3">
+						<a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+							<span className="font-mono text-sm font-semibold tracking-tight">@crafter/mermaid</span>
 						</a>
-						<span className="text-xs font-mono text-[var(--text-muted)]">/</span>
-						<span className="text-xs font-mono text-[var(--accent-cyan)]">playground</span>
 					</div>
 
 					<div className="flex items-center gap-3">
@@ -1019,17 +1019,16 @@ function PlaygroundContent() {
 									setTimeout(() => chatPanelRef.current?.focusInput(), 0);
 								}
 							}}
-							className={`px-2 h-7 flex items-center justify-center gap-1 rounded-md border text-[11px] font-mono transition-colors cursor-pointer ${
+							className={`w-7 h-7 flex items-center justify-center rounded-md border transition-colors cursor-pointer ${
 								showChat
 									? "bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)] border-[var(--accent-cyan)]/30"
 									: "border-[var(--border)] hover:border-[var(--border-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
 							}`}
+							title="AI Chat (⌘I)"
 						>
-							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 								<path d="M12 2a8 8 0 0 0-8 8c0 3.4 2.1 6.3 5.2 7.4.4.1.6.5.5.9l-.4 1.7a.5.5 0 0 0 .7.6l2.5-1.2c.2-.1.5-.1.7 0A8 8 0 1 0 12 2z"/>
-								<path d="M8 10h.01M12 10h.01M16 10h.01"/>
 							</svg>
-							AI
 						</button>
 						<button
 							onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
@@ -1054,6 +1053,13 @@ function PlaygroundContent() {
 						>
 							<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" /></svg>
 						</a>
+						<button
+							onClick={handleShare}
+							className="flex items-center gap-1.5 px-3 h-7 rounded-md text-[11px] font-medium bg-[var(--accent-blue)] text-white hover:opacity-90 transition-opacity cursor-pointer"
+						>
+							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" /></svg>
+							{shared ? "Copied!" : "Share"}
+						</button>
 					</div>
 				</header>
 
@@ -1143,25 +1149,26 @@ function PlaygroundContent() {
 
 				<div className="flex-1 flex min-h-0">
 					<div className="w-[400px] shrink-0 flex flex-col border-r border-[var(--border)]">
-						<div className="flex items-center justify-between px-3 h-8 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
-							<span className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider">Source</span>
-							<span className="text-[10px] font-mono text-[var(--text-muted)]">{sourceLines.length} lines</span>
+						<div className="flex items-center justify-between px-1 h-9 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
+							<div className="flex items-center">
+								<span className="px-3 py-1.5 text-[12px] font-mono text-[var(--text-primary)] border-b-2 border-[var(--accent-blue)]">source.mmd</span>
+							</div>
+							<div className="flex items-center gap-0.5 pr-2">
+								<button onClick={handleCopy} className="w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer" title="Copy source">
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
+								</button>
+								<span className="text-[10px] font-mono text-[var(--text-muted)] tabular-nums px-1">{sourceLines.length}L</span>
+							</div>
 						</div>
 						{mode === "edit" ? (
 							<div className="flex-1 relative overflow-hidden">
-								<div
-									ref={highlightRef}
-									className="absolute inset-0 overflow-auto p-4 pointer-events-none [&_pre]:!bg-transparent [&_code]:text-[13px] [&_code]:leading-6 [&_code]:font-mono"
-									aria-hidden="true"
-									dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-								/>
 								<textarea
 									ref={textareaRef}
 									value={source}
 									onChange={(e) => setSource(e.target.value)}
-									onScroll={syncScroll}
 									spellCheck={false}
-									className="absolute inset-0 w-full h-full p-4 font-mono text-[13px] leading-6 bg-transparent text-transparent caret-[var(--text-primary)] resize-none focus:outline-none selection:bg-[var(--accent-blue)]/20"
+									wrap="off"
+									className="absolute inset-0 w-full h-full p-4 font-mono text-[13px] leading-6 bg-[var(--code-bg)] text-[var(--text-primary)] caret-[var(--text-primary)] resize-none focus:outline-none whitespace-pre overflow-auto selection:bg-[var(--accent-blue)]/20"
 									placeholder="Type mermaid diagram syntax..."
 								/>
 							</div>
@@ -1192,34 +1199,63 @@ function PlaygroundContent() {
 					</div>
 
 					<div className="flex-1 flex flex-col min-w-0">
-						<div className="flex items-center justify-between px-3 h-8 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
-							<div className="flex items-center gap-1">
-								{(["svg", "ascii", "code"] as OutputTab[]).map((tab) => (
+						<div className="flex items-center justify-between px-3 h-9 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
+							<div className="flex items-center gap-1.5">
+								{(["svg", "ascii", "code"] as OutputTab[]).map((t) => (
 									<button
-										key={tab}
-										onClick={() => setOutputTab(tab)}
-										className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider transition-colors cursor-pointer ${
-											outputTab === tab
-												? "bg-[var(--accent-blue)]/10 text-[var(--accent-blue)]"
+										key={t}
+										onClick={() => setOutputTab(t)}
+										className={`px-2 py-0.5 rounded text-[12px] font-mono transition-colors cursor-pointer ${
+											outputTab === t
+												? "text-[var(--text-primary)]"
 												: "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
 										}`}
 									>
-										{tab === "svg" ? "Preview" : tab === "ascii" ? "Terminal" : "SVG Code"}
+										{t === "svg" ? "Preview" : t === "ascii" ? "Terminal" : "SVG Code"}
 									</button>
 								))}
+								{outputTab === "svg" && !error && renderTime !== null && (
+									<span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-green)]" />
+								)}
 							</div>
-							<div className="flex items-center gap-1">
+							<div className="flex items-center gap-0.5">
+								{outputTab === "svg" && mode === "edit" && (
+									<>
+										{[
+											{ key: "enableZoomPan", label: "Zoom" },
+											{ key: "enableKeyboard", label: "Keys" },
+											{ key: "enableSearch", label: "Search" },
+											{ key: "enableHover", label: "Hover" },
+											{ key: "enableMinimap", label: "Map" },
+										].map(({ key, label }) => (
+											<button
+												key={key}
+												onClick={() => toggleInteraction(key)}
+												className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer ${
+													interactions.has(key)
+														? "bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)]"
+														: "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+												}`}
+											>
+												{label}
+											</button>
+										))}
+										<div className="w-px h-4 bg-[var(--border)] mx-1" />
+									</>
+								)}
 								<button
 									onClick={handleCopy}
-									className="px-2 py-0.5 rounded text-[10px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+									className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+									title={copied ? "Copied!" : "Copy"}
 								>
-									{copied ? "Copied" : "Copy"}
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
 								</button>
 								<button
 									onClick={handleDownload}
-									className="px-2 py-0.5 rounded text-[10px] font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+									className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer"
+									title="Download SVG"
 								>
-									Download SVG
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
 								</button>
 							</div>
 						</div>
@@ -1279,30 +1315,10 @@ function PlaygroundContent() {
 					)}
 				</div>
 
-				{mode === "edit" && (
-					<div className="flex items-center gap-2 px-4 h-8 border-t border-[var(--border)] bg-[var(--bg-secondary)] shrink-0">
-						<span className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider mr-2">Interact:</span>
-						{[
-							{ key: "enableZoomPan", label: "Zoom & Pan" },
-							{ key: "enableKeyboard", label: "Keyboard" },
-							{ key: "enableSearch", label: "Search" },
-							{ key: "enableHover", label: "Hover" },
-							{ key: "enableMinimap", label: "Minimap" },
-						].map(({ key, label }) => (
-							<button
-								key={key}
-								onClick={() => toggleInteraction(key)}
-								className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer ${
-									interactions.has(key)
-										? "bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)] border border-[var(--accent-cyan)]/30"
-										: "text-[var(--text-muted)] border border-[var(--border)] hover:border-[var(--border-hover)]"
-								}`}
-							>
-								{label}
-							</button>
-						))}
-					</div>
-				)}
+				<div className="flex items-center justify-between px-4 h-7 border-t border-[var(--border)] bg-[var(--bg-secondary)] shrink-0">
+					<span className="text-[10px] text-[var(--text-muted)]">Built with <a href="/" className="hover:text-[var(--text-primary)] transition-colors">@crafter/mermaid</a></span>
+					<a href="https://github.com/crafter-station/mermaid" target="_blank" rel="noopener noreferrer" className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Source code on GitHub</a>
+				</div>
 			</div>
 		</>
 	);
