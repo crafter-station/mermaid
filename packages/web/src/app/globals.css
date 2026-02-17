@@ -21,6 +21,26 @@
 	--code-bg: #f5f5f5;
 	--comparison-ours: #059669;
 	--comparison-theirs: #737373;
+
+	--background: #ffffff;
+	--foreground: #0a0a0a;
+	--card: #ffffff;
+	--card-foreground: #0a0a0a;
+	--popover: #ffffff;
+	--popover-foreground: #0a0a0a;
+	--primary: #0a0a0a;
+	--primary-foreground: #ffffff;
+	--secondary: #f0f0f0;
+	--secondary-foreground: #0a0a0a;
+	--muted: #f5f5f5;
+	--muted-foreground: #737373;
+	--accent: #f0f0f0;
+	--accent-foreground: #0a0a0a;
+	--destructive: #ef4444;
+	--destructive-foreground: #ffffff;
+	--input: #e5e5e5;
+	--ring: #0a0a0a;
+	--radius: 0.5rem;
 }
 
 .dark {
@@ -42,6 +62,57 @@
 	--code-bg: #1a1a1a;
 	--comparison-ours: #10b981;
 	--comparison-theirs: #a0a0a0;
+
+	--background: #0a0a0a;
+	--foreground: #fafafa;
+	--card: #111111;
+	--card-foreground: #fafafa;
+	--popover: #0a0a0a;
+	--popover-foreground: #fafafa;
+	--primary: #fafafa;
+	--primary-foreground: #0a0a0a;
+	--secondary: #1a1a1a;
+	--secondary-foreground: #fafafa;
+	--muted: #1a1a1a;
+	--muted-foreground: #a0a0a0;
+	--accent: #1a1a1a;
+	--accent-foreground: #fafafa;
+	--destructive: #ef4444;
+	--destructive-foreground: #ffffff;
+	--input: #2a2a2a;
+	--ring: #fafafa;
+}
+
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
 }
 
 html {

@@ -5,3 +5,4 @@ dist
 test-output.html
 packages/visual-test.html
 .vercel
+.env.local
