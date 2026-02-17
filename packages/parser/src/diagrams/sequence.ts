@@ -111,7 +111,7 @@ function parseParticipant(
 	span: SourceSpan,
 	state: ParserState,
 ): void {
-	const match = line.match(/^(participant|actor)\s+(\w+)(?:\s+as\s+(.+))?$/);
+	const match = line.match(/^(participant|actor)\s+([\w\p{L}]+)(?:\s+as\s+(.+))?$/u);
 	if (!match) {
 		state.diagnostics.push(
 			createError("Invalid participant syntax", span, [
