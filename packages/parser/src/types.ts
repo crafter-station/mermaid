@@ -91,10 +91,17 @@ export interface SequenceMessage {
 	span: SourceSpan;
 }
 
+export type SequenceItem = SequenceMessage | SequenceBlock | SequenceNote;
+
+export interface SequenceBlockSection {
+	label?: string;
+	messages: SequenceItem[];
+}
+
 export interface SequenceBlock {
 	type: "loop" | "alt" | "opt" | "par" | "critical" | "break" | "rect";
 	label: string;
-	sections: Array<{ label?: string; messages: SequenceMessage[] }>;
+	sections: SequenceBlockSection[];
 	span: SourceSpan;
 }
 

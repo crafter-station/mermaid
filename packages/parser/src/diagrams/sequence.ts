@@ -3,6 +3,7 @@ import type {
 	ParseResult,
 	SequenceAST,
 	SequenceBlock,
+	SequenceBlockSection,
 	SequenceMessage,
 	SequenceNote,
 	SequenceParticipant,
@@ -21,7 +22,7 @@ interface ParserState {
 	diagnostics: ParseDiagnostic[];
 	blockStack: Array<{
 		block: SequenceBlock;
-		currentSection: { label?: string; messages: SequenceMessage[] };
+		currentSection: SequenceBlockSection;
 	}>;
 }
 
@@ -282,7 +283,10 @@ function parseBlockStart(
 		span,
 	};
 
-	const currentSection = { label: undefined, messages: [] };
+	const currentSection: SequenceBlockSection = {
+		label: undefined,
+		messages: [],
+	};
 	block.sections.push(currentSection);
 
 	state.blockStack.push({ block, currentSection });
@@ -307,7 +311,7 @@ function parseBlockSection(
 	}
 
 	const [, , label] = match;
-	const currentSection = { label, messages: [] };
+	const currentSection: SequenceBlockSection = { label, messages: [] };
 	const context = state.blockStack[state.blockStack.length - 1]!;
 	context.block.sections.push(currentSection);
 	context.currentSection = currentSection;
@@ -323,7 +327,7 @@ function parseBlockEnd(span: SourceSpan, state: ParserState): void {
 
 	if (state.blockStack.length > 0) {
 		state.blockStack[state.blockStack.length - 1]!.currentSection.messages.push(
-			block as any,
+			block,
 		);
 	} else {
 		state.messages.push(block);
@@ -373,7 +377,7 @@ function addToCurrentScope(
 ): void {
 	if (state.blockStack.length > 0) {
 		state.blockStack[state.blockStack.length - 1]!.currentSection.messages.push(
-			item as any,
+			item,
 		);
 	} else {
 		state.messages.push(item);
