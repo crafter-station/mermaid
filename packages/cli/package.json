@@ -13,7 +13,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@crafter/mermaid-parser": "workspace:*",
     "@crafter/mermaid-layout": "workspace:*",
@@ -21,6 +23,10 @@
   },
   "scripts": {
     "build": "tsup",
-    "test": "bun test src/"
+    "test": "bun test src/",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1"
   }
 }

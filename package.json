@@ -8,7 +8,8 @@
     "build": "bun run --filter '@crafter/mermaid-parser' --filter '@crafter/mermaid-themes' build && bun run --filter '@crafter/mermaid-layout' build && bun run --filter '@crafter/mermaid-renderer' build && bun run --filter '@crafter/mermaid' --filter '@crafter/mermaid-cli' --filter '@crafter/mermaid-player' build",
     "test": "bun run --filter '*' test",
     "check": "biome check --write .",
-    "dev": "bun run packages/mermaid/src/dev.ts"
+    "dev": "bun run packages/mermaid/src/dev.ts",
+    "typecheck": "bun run --filter \"*\" typecheck"
   },
   "devDependencies": {
     "@types/bun": "^1.3.8",

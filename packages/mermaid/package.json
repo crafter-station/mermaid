@@ -17,7 +17,9 @@
   },
   "unpkg": "./dist/crafter-mermaid.browser.global.js",
   "jsdelivr": "./dist/crafter-mermaid.browser.global.js",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@crafter/mermaid-parser": "workspace:*",
     "@crafter/mermaid-layout": "workspace:*",
@@ -26,6 +28,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "test": "bun test src/"
+    "test": "bun test src/",
+    "typecheck": "tsc --noEmit"
   }
 }
