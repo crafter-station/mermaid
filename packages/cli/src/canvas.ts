@@ -139,7 +139,7 @@ export class TerminalCanvas {
 		const xi = Math.round(x);
 		const yi = Math.round(y);
 		for (let i = 0; i < text.length; i++) {
-			this.set(xi + i, yi, text[i]!, color);
+			this.set(xi + i, yi, text.charAt(i), color);
 		}
 	}
 

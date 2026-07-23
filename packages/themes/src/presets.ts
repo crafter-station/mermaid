@@ -41,3 +41,5 @@ export const THEMES: Record<string, DiagramColors> = {
 };
 
 export const DEFAULTS: DiagramColors = { bg: "#ffffff", fg: "#27272a" };
+
+export const THEME_NAMES: string[] = Object.keys(THEMES).sort();

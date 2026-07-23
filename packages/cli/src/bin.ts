@@ -2,7 +2,7 @@
 
 import { readFileSync } from "node:fs";
 import { renderToTerminal } from "./terminal";
-import { THEMES } from "@crafter/mermaid-themes";
+import { THEMES, THEME_NAMES } from "@crafter/mermaid-themes";
 
 function printUsage() {
 	console.log(`
@@ -28,7 +28,7 @@ Examples:
 
 function listThemes() {
 	console.log("Available themes:");
-	for (const name of Object.keys(THEMES).sort()) {
+	for (const name of THEME_NAMES) {
 		console.log(`  ${name}`);
 	}
 }

@@ -37,8 +37,11 @@ function drawNode(
 	const w = node.width * scale;
 	const h = node.height * scale;
 
-	const nodeColor = node.inlineStyle?.stroke ?? colors.nodeStroke;
-	const textColor = node.inlineStyle?.color ?? colors.text;
+	const inlineStyle = node.inlineStyle;
+	const inlineStroke = inlineStyle ? inlineStyle.stroke : undefined;
+	const inlineColor = inlineStyle ? inlineStyle.color : undefined;
+	const nodeColor = inlineStroke !== undefined ? inlineStroke : colors.nodeStroke;
+	const textColor = inlineColor !== undefined ? inlineColor : colors.text;
 
 	switch (node.shape) {
 		case "state-start": {
@@ -181,7 +184,14 @@ export function renderToTerminal(
 	const ast = parseResult.ast;
 	const graph = layout(ast);
 
-	const terminalWidth = options.width ?? process.stdout.columns ?? 80;
+	const optWidth = options.width;
+	const stdoutColumns = (process.stdout as { columns?: number }).columns;
+	const terminalWidth =
+		optWidth !== undefined
+			? optWidth
+			: stdoutColumns !== undefined
+				? stdoutColumns
+				: 80;
 	const scale = options.compact
 		? Math.min(0.1, terminalWidth / graph.width)
 		: Math.min(0.15, terminalWidth / graph.width);
@@ -191,7 +201,8 @@ export function renderToTerminal(
 
 	const canvas = new TerminalCanvas(canvasWidth, canvasHeight);
 
-	const theme = options.theme ?? DEFAULTS;
+	const optTheme = options.theme;
+	const theme = optTheme !== undefined ? optTheme : DEFAULTS;
 	const colors = resolveColors(theme);
 
 	for (const group of graph.groups) {
