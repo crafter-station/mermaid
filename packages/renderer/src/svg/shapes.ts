@@ -3,15 +3,15 @@ import type { RenderContext } from "../types";
 
 type ShapeRenderer = (node: PositionedNode, ctx: RenderContext) => string;
 
-function rectangle(node: PositionedNode, ctx: RenderContext): string {
+function rectangle(node: PositionedNode, _ctx: RenderContext): string {
 	return `<rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5" rx="0"/>`;
 }
 
-function rounded(node: PositionedNode, ctx: RenderContext): string {
+function rounded(node: PositionedNode, _ctx: RenderContext): string {
 	return `<rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5" rx="8"/>`;
 }
 
-function diamond(node: PositionedNode, ctx: RenderContext): string {
+function diamond(node: PositionedNode, _ctx: RenderContext): string {
 	const cx = node.x + node.width / 2;
 	const cy = node.y + node.height / 2;
 	const hw = node.width / 2;
@@ -20,26 +20,26 @@ function diamond(node: PositionedNode, ctx: RenderContext): string {
 	return `<polygon points="${points}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5"/>`;
 }
 
-function stadium(node: PositionedNode, ctx: RenderContext): string {
+function stadium(node: PositionedNode, _ctx: RenderContext): string {
 	const rx = Math.min(node.height / 2, node.width / 2);
 	return `<rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5" rx="${rx}"/>`;
 }
 
-function circle(node: PositionedNode, ctx: RenderContext): string {
+function circle(node: PositionedNode, _ctx: RenderContext): string {
 	const cx = node.x + node.width / 2;
 	const cy = node.y + node.height / 2;
 	const r = Math.min(node.width, node.height) / 2;
 	return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5"/>`;
 }
 
-function subroutine(node: PositionedNode, ctx: RenderContext): string {
+function subroutine(node: PositionedNode, _ctx: RenderContext): string {
 	const outer = `<rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5" rx="0"/>`;
 	const inset = 4;
 	const inner = `<rect x="${node.x + inset}" y="${node.y + inset}" width="${node.width - inset * 2}" height="${node.height - inset * 2}" fill="none" stroke="var(--_node-stroke)" stroke-width="1.5" rx="0"/>`;
 	return outer + inner;
 }
 
-function doublecircle(node: PositionedNode, ctx: RenderContext): string {
+function doublecircle(node: PositionedNode, _ctx: RenderContext): string {
 	const cx = node.x + node.width / 2;
 	const cy = node.y + node.height / 2;
 	const r = Math.min(node.width, node.height) / 2;
@@ -47,7 +47,7 @@ function doublecircle(node: PositionedNode, ctx: RenderContext): string {
 	return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5"/><circle cx="${cx}" cy="${cy}" r="${innerR}" fill="none" stroke="var(--_node-stroke)" stroke-width="1.5"/>`;
 }
 
-function hexagon(node: PositionedNode, ctx: RenderContext): string {
+function hexagon(node: PositionedNode, _ctx: RenderContext): string {
 	const cx = node.x + node.width / 2;
 	const cy = node.y + node.height / 2;
 	const hw = node.width / 2;
@@ -57,7 +57,7 @@ function hexagon(node: PositionedNode, ctx: RenderContext): string {
 	return `<polygon points="${points}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5"/>`;
 }
 
-function cylinder(node: PositionedNode, ctx: RenderContext): string {
+function cylinder(node: PositionedNode, _ctx: RenderContext): string {
 	const topH = node.height * 0.1;
 	const x = node.x;
 	const y = node.y;
@@ -78,7 +78,7 @@ function cylinder(node: PositionedNode, ctx: RenderContext): string {
 	return body + ellipse;
 }
 
-function asymmetric(node: PositionedNode, ctx: RenderContext): string {
+function asymmetric(node: PositionedNode, _ctx: RenderContext): string {
 	const x = node.x;
 	const y = node.y;
 	const w = node.width;
@@ -88,7 +88,7 @@ function asymmetric(node: PositionedNode, ctx: RenderContext): string {
 	return `<polygon points="${points}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5"/>`;
 }
 
-function trapezoid(node: PositionedNode, ctx: RenderContext): string {
+function trapezoid(node: PositionedNode, _ctx: RenderContext): string {
 	const x = node.x;
 	const y = node.y;
 	const w = node.width;
@@ -98,7 +98,7 @@ function trapezoid(node: PositionedNode, ctx: RenderContext): string {
 	return `<polygon points="${points}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5"/>`;
 }
 
-function trapezoidAlt(node: PositionedNode, ctx: RenderContext): string {
+function trapezoidAlt(node: PositionedNode, _ctx: RenderContext): string {
 	const x = node.x;
 	const y = node.y;
 	const w = node.width;
@@ -108,7 +108,7 @@ function trapezoidAlt(node: PositionedNode, ctx: RenderContext): string {
 	return `<polygon points="${points}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5"/>`;
 }
 
-function parallelogram(node: PositionedNode, ctx: RenderContext): string {
+function parallelogram(node: PositionedNode, _ctx: RenderContext): string {
 	const x = node.x;
 	const y = node.y;
 	const w = node.width;
@@ -118,7 +118,7 @@ function parallelogram(node: PositionedNode, ctx: RenderContext): string {
 	return `<polygon points="${points}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5"/>`;
 }
 
-function note(node: PositionedNode, ctx: RenderContext): string {
+function note(node: PositionedNode, _ctx: RenderContext): string {
 	const x = node.x;
 	const y = node.y;
 	const w = node.width;
@@ -128,7 +128,7 @@ function note(node: PositionedNode, ctx: RenderContext): string {
 	return `<path d="${path}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5"/>`;
 }
 
-function cloud(node: PositionedNode, ctx: RenderContext): string {
+function cloud(node: PositionedNode, _ctx: RenderContext): string {
 	const x = node.x;
 	const y = node.y;
 	const w = node.width;
@@ -147,14 +147,14 @@ function cloud(node: PositionedNode, ctx: RenderContext): string {
 	return `<path d="${path}" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="1.5"/>`;
 }
 
-function stateStart(node: PositionedNode, ctx: RenderContext): string {
+function stateStart(node: PositionedNode, _ctx: RenderContext): string {
 	const cx = node.x + node.width / 2;
 	const cy = node.y + node.height / 2;
 	const r = Math.min(node.width, node.height) / 4;
 	return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--_text)" stroke="none"/>`;
 }
 
-function stateEnd(node: PositionedNode, ctx: RenderContext): string {
+function stateEnd(node: PositionedNode, _ctx: RenderContext): string {
 	const cx = node.x + node.width / 2;
 	const cy = node.y + node.height / 2;
 	const r = Math.min(node.width, node.height) / 3;
@@ -170,13 +170,13 @@ const PIE_COLORS = [
 
 function pieSlice(node: PositionedNode, _ctx: RenderContext): string {
 	if (!node.inlineStyle) return "";
-	const cx = parseFloat(node.inlineStyle.cx);
-	const cy = parseFloat(node.inlineStyle.cy);
-	const r = parseFloat(node.inlineStyle.radius);
-	const start = parseFloat(node.inlineStyle.startAngle);
-	const end = parseFloat(node.inlineStyle.endAngle);
-	const idx = parseInt(node.inlineStyle.index);
-	const color = PIE_COLORS[idx % PIE_COLORS.length];
+	const cx = parseFloat(node.inlineStyle.cx!);
+	const cy = parseFloat(node.inlineStyle.cy!);
+	const r = parseFloat(node.inlineStyle.radius!);
+	const start = parseFloat(node.inlineStyle.startAngle!);
+	const end = parseFloat(node.inlineStyle.endAngle!);
+	const idx = parseInt(node.inlineStyle.index!);
+	const color = PIE_COLORS[idx % PIE_COLORS.length]!;
 
 	const x1 = cx + r * Math.cos(start);
 	const y1 = cy + r * Math.sin(start);
@@ -188,7 +188,7 @@ function pieSlice(node: PositionedNode, _ctx: RenderContext): string {
 	return `<path d="${path}" fill="${color}" stroke="var(--bg)" stroke-width="2"/>`;
 }
 
-function pieTitle(node: PositionedNode, ctx: RenderContext): string {
+function pieTitle(_node: PositionedNode, _ctx: RenderContext): string {
 	return "";
 }
 
@@ -207,11 +207,11 @@ function ganttBar(node: PositionedNode, _ctx: RenderContext): string {
 	return `<rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" fill="${fill}" stroke="${stroke}" stroke-width="1" rx="4"/>`;
 }
 
-function ganttTitle(node: PositionedNode, _ctx: RenderContext): string {
+function ganttTitle(_node: PositionedNode, _ctx: RenderContext): string {
 	return "";
 }
 
-function erEntity(node: PositionedNode, ctx: RenderContext): string {
+function erEntity(node: PositionedNode, _ctx: RenderContext): string {
 	const x = node.x;
 	const y = node.y;
 	const w = node.width;
@@ -229,7 +229,7 @@ function erEntity(node: PositionedNode, ctx: RenderContext): string {
 	return svg;
 }
 
-function classBox(node: PositionedNode, ctx: RenderContext): string {
+function classBox(node: PositionedNode, _ctx: RenderContext): string {
 	const x = node.x;
 	const y = node.y;
 	const w = node.width;

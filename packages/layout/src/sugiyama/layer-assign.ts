@@ -77,7 +77,7 @@ export function insertVirtualNodes<N, E>(
 
 			for (let i = 1; i < layerSpan; i++) {
 				const virtualId = `__virtual_${virtualCounter++}`;
-				graph.addNode(virtualId, edge.data as N, 0, 0);
+				graph.addNode(virtualId, edge.data as unknown as N, 0, 0);
 				layers.set(virtualId, sourceLayer + i);
 
 				graph.addEdge(prevNode, virtualId, edge.data, edge.weight);
@@ -102,7 +102,7 @@ export function buildLayerArrays(
 	const layerArrays: string[][] = Array.from({ length: maxLayer + 1 }, () => []);
 
 	for (const [nodeId, layer] of layers) {
-		layerArrays[layer].push(nodeId);
+		layerArrays[layer]!.push(nodeId);
 	}
 
 	for (const layer of layerArrays) {

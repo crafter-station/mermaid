@@ -90,7 +90,7 @@ function renderClassBoxLabel(node: PositionedNode, ctx: RenderContext): string {
 
 		while (idx < parts.length && parts[idx] !== "---") {
 			currentY += lineHeight * 0.8;
-			svg += `<text x="${x + padding}" y="${currentY}" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="12" font-weight="400">${escapeXml(parts[idx])}</text>`;
+			svg += `<text x="${x + padding}" y="${currentY}" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="12" font-weight="400">${escapeXml(parts[idx]!)}</text>`;
 			idx++;
 		}
 	}
@@ -103,7 +103,7 @@ function renderClassBoxLabel(node: PositionedNode, ctx: RenderContext): string {
 
 		while (idx < parts.length) {
 			currentY += lineHeight * 0.8;
-			svg += `<text x="${x + padding}" y="${currentY}" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="12" font-weight="400">${escapeXml(parts[idx])}</text>`;
+			svg += `<text x="${x + padding}" y="${currentY}" dominant-baseline="middle" fill="var(--_text)" font-family="${ctx.font}" font-size="12" font-weight="400">${escapeXml(parts[idx]!)}</text>`;
 			idx++;
 		}
 	}
@@ -111,7 +111,7 @@ function renderClassBoxLabel(node: PositionedNode, ctx: RenderContext): string {
 	return svg;
 }
 
-export function renderEdgeLabel(edge: PositionedEdge, ctx: RenderContext): string {
+export function renderEdgeLabel(edge: PositionedEdge, _ctx: RenderContext): string {
 	if (!edge.label || !edge.labelPosition) return "";
 
 	const { x, y } = edge.labelPosition;

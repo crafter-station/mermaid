@@ -5,6 +5,7 @@ import type {
 	ERRelation,
 	ParseDiagnostic,
 	ParseResult,
+	SourceSpan,
 } from "../types";
 import {
 	createError,
@@ -43,6 +44,9 @@ export function parseER(source: string): ParseResult<ERAST> {
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
+		if (line === undefined) {
+			continue;
+		}
 		const trimmed = line.trim();
 
 		if (!trimmed || trimmed.startsWith("%%")) {
@@ -99,7 +103,7 @@ function parseEntityStart(
 		return;
 	}
 
-	const id = match[1];
+	const id = match[1]!;
 	const entity: EREntity = {
 		id,
 		attributes: [],
@@ -135,8 +139,8 @@ function parseAttribute(
 	const keys = keysStr ? keysStr.split(",") : [];
 
 	state.currentEntity.attributes.push({
-		name,
-		type,
+		name: name!,
+		type: type!,
 		keys,
 		comment,
 		span,
@@ -159,8 +163,8 @@ function parseRelation(line: string, span: SourceSpan, state: ParserState): void
 
 	const [, from, fromCardStr, linkType, toCardStr, to, label] = match;
 
-	const fromCardinality = CARDINALITY_MAP[fromCardStr];
-	const toCardinality = CARDINALITY_MAP[toCardStr];
+	const fromCardinality = fromCardStr ? CARDINALITY_MAP[fromCardStr] : undefined;
+	const toCardinality = toCardStr ? CARDINALITY_MAP[toCardStr] : undefined;
 	const identifying = linkType === "--";
 
 	if (!fromCardinality || !toCardinality) {
@@ -172,15 +176,15 @@ function parseRelation(line: string, span: SourceSpan, state: ParserState): void
 		return;
 	}
 
-	ensureEntity(from, span, state);
-	ensureEntity(to, span, state);
+	ensureEntity(from!, span, state);
+	ensureEntity(to!, span, state);
 
 	state.relations.push({
-		from,
-		to,
+		from: from!,
+		to: to!,
 		fromCardinality,
 		toCardinality,
-		label,
+		label: label!,
 		identifying,
 		span,
 	});

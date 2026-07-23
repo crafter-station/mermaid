@@ -9,7 +9,13 @@ declare global {
 		crafterMermaid: {
 			render: (text: string, options?: Record<string, unknown>) => string;
 			parse: (text: string) => { ast: Record<string, unknown> | null };
-			layout: (ast: Record<string, unknown>) => Record<string, unknown>;
+			layout: (
+				ast: Record<string, unknown>,
+				options?: Record<string, unknown>,
+			) => {
+				nodes: { id: string; label: string }[];
+				edges: { source: string; target: string; label?: string }[];
+			} & Record<string, unknown>;
 			renderToString: (graph: Record<string, unknown>, options?: Record<string, unknown>) => string;
 			renderToDOM: (graph: Record<string, unknown>, options?: Record<string, unknown>) => SVGSVGElement;
 			renderToAscii: (text: string, options?: Record<string, unknown>) => string;

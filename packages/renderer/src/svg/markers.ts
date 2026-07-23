@@ -1,6 +1,6 @@
 import type { RenderContext } from "../types";
 
-export function renderMarkers(ctx: RenderContext): string {
+export function renderMarkers(_ctx: RenderContext): string {
 	return `
 		<defs>
 			<marker id="arrowhead" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto" markerUnits="userSpaceOnUse">

@@ -3,6 +3,7 @@ import type {
 	GanttTask,
 	ParseDiagnostic,
 	ParseResult,
+	SourceSpan,
 } from "../types";
 import {
 	createError,
@@ -30,6 +31,9 @@ export function parseGantt(source: string): ParseResult<GanttAST> {
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
+		if (line === undefined) {
+			continue;
+		}
 		const trimmed = line.trim();
 
 		if (!trimmed || trimmed.startsWith("%%")) {
@@ -45,7 +49,7 @@ export function parseGantt(source: string): ParseResult<GanttAST> {
 		if (/^title\s+(.+)$/i.test(trimmed)) {
 			const match = trimmed.match(/^title\s+(.+)$/i);
 			if (match) {
-				state.title = match[1].trim();
+				state.title = match[1]!.trim();
 			}
 			continue;
 		}
@@ -53,7 +57,7 @@ export function parseGantt(source: string): ParseResult<GanttAST> {
 		if (/^dateFormat\s+(.+)$/i.test(trimmed)) {
 			const match = trimmed.match(/^dateFormat\s+(.+)$/i);
 			if (match) {
-				state.dateFormat = match[1].trim();
+				state.dateFormat = match[1]!.trim();
 			}
 			continue;
 		}
@@ -61,7 +65,7 @@ export function parseGantt(source: string): ParseResult<GanttAST> {
 		if (/^section\s+(.+)$/i.test(trimmed)) {
 			const match = trimmed.match(/^section\s+(.+)$/i);
 			if (match) {
-				state.currentSection = match[1].trim();
+				state.currentSection = match[1]!.trim();
 				if (!state.sections.has(state.currentSection)) {
 					state.sections.set(state.currentSection, []);
 				}
@@ -124,26 +128,26 @@ function parseTask(
 	const status = statusStr as GanttTask["status"] | undefined;
 
 	const task: GanttTask = {
-		label: label.trim(),
+		label: label!.trim(),
 		status,
 		id,
 		section: state.currentSection,
 		span,
 	};
 
-	const afterMatch = timing.match(/^after\s+(\w+)(?:,\s*(.+))?$/);
+	const afterMatch = timing!.match(/^after\s+(\w+)(?:,\s*(.+))?$/);
 	if (afterMatch) {
 		task.afterId = afterMatch[1];
 		if (afterMatch[2]) {
 			task.duration = afterMatch[2].trim();
 		}
 	} else {
-		const timingParts = timing.split(",").map((p) => p.trim());
+		const timingParts = timing!.split(",").map((p) => p.trim());
 		if (timingParts.length === 2) {
 			const [start, durationOrEnd] = timingParts;
 			task.startDate = start;
 
-			if (/^\d+d$/.test(durationOrEnd)) {
+			if (/^\d+d$/.test(durationOrEnd!)) {
 				task.duration = durationOrEnd;
 			} else {
 				task.endDate = durationOrEnd;

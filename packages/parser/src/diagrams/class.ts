@@ -7,6 +7,7 @@ import type {
 	ClassRelationType,
 	ParseDiagnostic,
 	ParseResult,
+	SourceSpan,
 } from "../types";
 import {
 	createError,
@@ -47,6 +48,9 @@ export function parseClass(source: string): ParseResult<ClassAST> {
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
+		if (line === undefined) {
+			continue;
+		}
 		const trimmed = line.trim();
 
 		if (!trimmed || trimmed.startsWith("%%")) {
@@ -125,7 +129,9 @@ function parseClassDefinition(
 		return;
 	}
 
-	const [, id, annotation, label] = match;
+	const id = match[1]!;
+	const annotation = match[2];
+	const label = match[3];
 	const classObj: ClassDefinition = {
 		id,
 		label,
@@ -168,7 +174,7 @@ function parseMemberString(
 	const [, visibilityRaw, rest] = visibilityMatch;
 	const visibility = (visibilityRaw || "") as ClassMember["visibility"];
 
-	let cleanStr = rest.trim();
+	let cleanStr = rest!.trim();
 	const isStatic = cleanStr.includes("$");
 	const isAbstract = cleanStr.includes("*");
 
@@ -178,7 +184,7 @@ function parseMemberString(
 	if (methodMatch) {
 		const [, name, , returnType] = methodMatch;
 		return {
-			name,
+			name: name!,
 			visibility,
 			isStatic,
 			isAbstract,
@@ -192,7 +198,7 @@ function parseMemberString(
 	if (typedAttrMatch) {
 		const [, type, name] = typedAttrMatch;
 		return {
-			name,
+			name: name!,
 			type,
 			visibility,
 			isStatic,
@@ -206,7 +212,7 @@ function parseMemberString(
 	if (attributeMatch) {
 		const [, name, type] = attributeMatch;
 		return {
-			name,
+			name: name!,
 			type,
 			visibility,
 			isStatic,
@@ -230,8 +236,8 @@ function parseRelation(line: string, span: SourceSpan, state: ParserState): void
 				return;
 			}
 
-			let from = parts[0].trim();
-			let to = parts[1].trim();
+			let from = parts[0]!.trim();
+			let to = parts[1]!.trim();
 			let label: string | undefined;
 			let fromCardinality: string | undefined;
 			let toCardinality: string | undefined;
@@ -239,18 +245,18 @@ function parseRelation(line: string, span: SourceSpan, state: ParserState): void
 			const fromCardMatch = from.match(/^"([^"]+)"\s+(\w+)$/);
 			if (fromCardMatch) {
 				fromCardinality = fromCardMatch[1];
-				from = fromCardMatch[2];
+				from = fromCardMatch[2]!;
 			}
 
 			const toCardMatch = to.match(/^(\w+)\s+"([^"]+)"$/);
 			if (toCardMatch) {
-				to = toCardMatch[1];
+				to = toCardMatch[1]!;
 				toCardinality = toCardMatch[2];
 			}
 
 			const labelMatch = to.match(/^(\w+)\s*:\s*(.+)$/);
 			if (labelMatch) {
-				to = labelMatch[1];
+				to = labelMatch[1]!;
 				label = labelMatch[2];
 			}
 
@@ -285,7 +291,8 @@ function parseNamespaceStart(
 		return;
 	}
 
-	const [, id, label] = match;
+	const id = match[1]!;
+	const label = match[2];
 	const namespace: ClassNamespace = {
 		id,
 		label: label || id,

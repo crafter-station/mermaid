@@ -7,20 +7,20 @@ function countCrossings<N, E>(
 	let crossings = 0;
 
 	for (let i = 0; i < layerArrays.length - 1; i++) {
-		const currentLayer = layerArrays[i];
-		const nextLayer = layerArrays[i + 1];
+		const currentLayer = layerArrays[i]!;
+		const nextLayer = layerArrays[i + 1]!;
 
 		const positions = new Map<string, number>();
 		for (let j = 0; j < nextLayer.length; j++) {
-			positions.set(nextLayer[j], j);
+			positions.set(nextLayer[j]!, j);
 		}
 
 		for (let a = 0; a < currentLayer.length; a++) {
-			const nodeA = currentLayer[a];
+			const nodeA = currentLayer[a]!;
 			const successorsA = graph.successors(nodeA);
 
 			for (let b = a + 1; b < currentLayer.length; b++) {
-				const nodeB = currentLayer[b];
+				const nodeB = currentLayer[b]!;
 				const successorsB = graph.successors(nodeB);
 
 				for (const succA of successorsA) {
@@ -51,7 +51,7 @@ function barycenter<N, E>(
 ): string[] {
 	const positions = new Map<string, number>();
 	for (let i = 0; i < prevLayer.length; i++) {
-		positions.set(prevLayer[i], i);
+		positions.set(prevLayer[i]!, i);
 	}
 
 	const weights = layer.map((nodeId) => {
@@ -93,8 +93,8 @@ export function minimizeCrossings<N, E>(
 			for (let i = 1; i < currentLayers.length; i++) {
 				currentLayers[i] = barycenter(
 					graph,
-					currentLayers[i],
-					currentLayers[i - 1],
+					currentLayers[i]!,
+					currentLayers[i - 1]!,
 					true,
 				);
 			}
@@ -102,8 +102,8 @@ export function minimizeCrossings<N, E>(
 			for (let i = currentLayers.length - 2; i >= 0; i--) {
 				currentLayers[i] = barycenter(
 					graph,
-					currentLayers[i],
-					currentLayers[i + 1],
+					currentLayers[i]!,
+					currentLayers[i + 1]!,
 					false,
 				);
 			}

@@ -11,10 +11,10 @@ export function estimateTextWidth(
 ): number {
 	const ratio =
 		fontWeight >= 600
-			? FONT_RATIOS.bold
+			? FONT_RATIOS.bold!
 			: fontWeight >= 500
-				? FONT_RATIOS.medium
-				: FONT_RATIOS.normal;
+				? FONT_RATIOS.medium!
+				: FONT_RATIOS.normal!;
 
 	return text.length * fontSize * ratio;
 }

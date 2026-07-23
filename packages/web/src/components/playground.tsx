@@ -289,7 +289,7 @@ export function Playground() {
 	const [currentStep, setCurrentStep] = useState(-1);
 	const [playing, setPlaying] = useState(false);
 	const [speedIndex, setSpeedIndex] = useState(1);
-	const speedRef = useRef(SPEED_PRESETS[1]!.value);
+	const speedRef = useRef<number>(SPEED_PRESETS[1]!.value);
 	const animControlRef = useRef<{ cancel: boolean }>({ cancel: false });
 	const stepsRef = useRef<LayerStep[]>([]);
 	stepsRef.current = steps;

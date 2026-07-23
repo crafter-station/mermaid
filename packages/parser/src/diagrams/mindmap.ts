@@ -3,6 +3,7 @@ import type {
 	MindmapNode,
 	ParseDiagnostic,
 	ParseResult,
+	SourceSpan,
 } from "../types";
 import {
 	createError,
@@ -30,6 +31,9 @@ export function parseMindmap(source: string): ParseResult<MindmapAST> {
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
+		if (line === undefined) {
+			continue;
+		}
 		const trimmed = line.trim();
 
 		if (!trimmed || trimmed.startsWith("%%")) {
@@ -104,7 +108,7 @@ function parseNode(
 		const match = line.match(regex);
 
 		if (match) {
-			label = match[1];
+			label = match[1]!;
 			shape = nodeShape;
 			break;
 		}
@@ -147,7 +151,7 @@ function addNodeToHierarchy(
 ): void {
 	while (
 		state.nodeStack.length > 0 &&
-		state.nodeStack[state.nodeStack.length - 1].indent >= indent
+		state.nodeStack[state.nodeStack.length - 1]!.indent >= indent
 	) {
 		state.nodeStack.pop();
 	}
@@ -162,7 +166,7 @@ function addNodeToHierarchy(
 		return;
 	}
 
-	const parent = state.nodeStack[state.nodeStack.length - 1].node;
+	const parent = state.nodeStack[state.nodeStack.length - 1]!.node;
 	parent.children.push(node);
 	state.nodeStack.push({ node, indent });
 }

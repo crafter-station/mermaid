@@ -29,6 +29,9 @@ export function parsePie(source: string): ParseResult<PieAST> {
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
+		if (line === undefined) {
+			continue;
+		}
 		const trimmed = line.trim();
 
 		if (!trimmed || trimmed.startsWith("%%")) {
@@ -49,7 +52,7 @@ export function parsePie(source: string): ParseResult<PieAST> {
 		if (/^title\s+(.+)$/i.test(trimmed)) {
 			const match = trimmed.match(/^title\s+(.+)$/i);
 			if (match) {
-				state.title = match[1].trim();
+				state.title = match[1]!.trim();
 			}
 			continue;
 		}
@@ -57,7 +60,7 @@ export function parsePie(source: string): ParseResult<PieAST> {
 		const sliceMatch = trimmed.match(/^"([^"]+)"\s*:\s*(\d+(?:\.\d+)?)$/);
 		if (sliceMatch) {
 			const [, label, valueStr] = sliceMatch;
-			const value = Number.parseFloat(valueStr);
+			const value = Number.parseFloat(valueStr!);
 
 			if (Number.isNaN(value) || value < 0) {
 				state.diagnostics.push(
@@ -67,7 +70,7 @@ export function parsePie(source: string): ParseResult<PieAST> {
 			}
 
 			state.slices.push({
-				label,
+				label: label!,
 				value,
 				span: lineSpan,
 			});

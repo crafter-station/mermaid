@@ -7,7 +7,8 @@ export function roundedPathData(points: { x: number; y: number }[], radius: numb
 		return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 	}
 
-	const parts: string[] = [`M ${points[0].x} ${points[0].y}`];
+	const first = points[0]!;
+	const parts: string[] = [`M ${first.x} ${first.y}`];
 
 	for (let i = 1; i < points.length - 1; i++) {
 		const prev = points[i - 1]!;
@@ -66,7 +67,7 @@ const CLASS_SOURCE_MARKERS: Record<string, string> = {
 	aggregation: "cls-aggregation",
 };
 
-export function renderEdge(edge: PositionedEdge, ctx: RenderContext): string {
+export function renderEdge(edge: PositionedEdge, _ctx: RenderContext): string {
 	const { points, style, hasArrowStart, hasArrowEnd } = edge;
 
 	if (points.length < 2) return "";

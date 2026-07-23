@@ -79,9 +79,11 @@ console.log("Testing Flowchart Parser:");
 const flowchartResult = parse(flowchartExample);
 console.log("AST:", flowchartResult.ast);
 console.log("Diagnostics:", flowchartResult.diagnostics);
-console.log("\nNodes:", Array.from(flowchartResult.ast?.nodes.values() ?? []));
-console.log("Edges:", flowchartResult.ast?.edges);
-console.log("Subgraphs:", flowchartResult.ast?.subgraphs);
+const flowchartAst =
+	flowchartResult.ast?.type === "flowchart" ? flowchartResult.ast : undefined;
+console.log("\nNodes:", Array.from(flowchartAst?.nodes.values() ?? []));
+console.log("Edges:", flowchartAst?.edges);
+console.log("Subgraphs:", flowchartAst?.subgraphs);
 
 console.log("\n\nTesting Sequence Diagram Parser:");
 const sequenceResult = parse(sequenceExample);

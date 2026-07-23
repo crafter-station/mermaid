@@ -6,7 +6,7 @@ function isHorizontal(direction: Direction): boolean {
 
 function routeFanIn(
 	start: Point,
-	source: { x: number; y: number; width: number; height: number },
+	_source: { x: number; y: number; width: number; height: number },
 	target: { x: number; y: number; width: number; height: number },
 	direction: Direction,
 	fanIn: { index: number; total: number },
@@ -52,8 +52,8 @@ function routeFanIn(
 export function snapToOrthogonal(points: Point[], direction: Direction): Point[] {
 	if (points.length < 2) return points;
 
-	const start = points[0];
-	const end = points[points.length - 1];
+	const start = points[0]!;
+	const end = points[points.length - 1]!;
 	const isHoriz = isHorizontal(direction);
 
 	if (points.length === 2 || points.length === 3) {
@@ -69,8 +69,8 @@ export function snapToOrthogonal(points: Point[], direction: Direction): Point[]
 
 	const result: Point[] = [start];
 	for (let i = 1; i < points.length - 1; i++) {
-		const prev = result[result.length - 1];
-		const curr = points[i];
+		const prev = result[result.length - 1]!;
+		const curr = points[i]!;
 		if (isHoriz) {
 			result.push({ x: curr.x, y: prev.y });
 			if (Math.abs(curr.y - prev.y) > 1) {
@@ -272,8 +272,8 @@ export function routeEdge(
 
 	if (points.length < 2) return points;
 
-	const afterStart = points.length > 2 ? points[1] : points[points.length - 1];
-	const beforeEnd = points.length > 2 ? points[points.length - 2] : points[0];
+	const afterStart = points.length > 2 ? points[1]! : points[points.length - 1]!;
+	const beforeEnd = points.length > 2 ? points[points.length - 2]! : points[0]!;
 
 	const startPoint = clipToNodeBoundary(afterStart, source, sourceShape);
 	const endPoint = clipToNodeBoundary(beforeEnd, target, targetShape);
@@ -289,8 +289,8 @@ export function computeLabelPosition(points: Point[]): Point {
 	const segments: number[] = [];
 
 	for (let i = 0; i < points.length - 1; i++) {
-		const dx = points[i + 1].x - points[i].x;
-		const dy = points[i + 1].y - points[i].y;
+		const dx = points[i + 1]!.x - points[i]!.x;
+		const dy = points[i + 1]!.y - points[i]!.y;
 		const len = Math.sqrt(dx * dx + dy * dy);
 		segments.push(len);
 		totalLength += len;
@@ -300,15 +300,15 @@ export function computeLabelPosition(points: Point[]): Point {
 	let accum = 0;
 
 	for (let i = 0; i < segments.length; i++) {
-		if (accum + segments[i] >= midLength) {
-			const t = (midLength - accum) / segments[i];
+		if (accum + segments[i]! >= midLength) {
+			const t = (midLength - accum) / segments[i]!;
 			return {
-				x: points[i].x + (points[i + 1].x - points[i].x) * t,
-				y: points[i].y + (points[i + 1].y - points[i].y) * t,
+				x: points[i]!.x + (points[i + 1]!.x - points[i]!.x) * t,
+				y: points[i]!.y + (points[i + 1]!.y - points[i]!.y) * t,
 			};
 		}
-		accum += segments[i];
+		accum += segments[i]!;
 	}
 
-	return points[Math.floor(points.length / 2)];
+	return points[Math.floor(points.length / 2)]!;
 }

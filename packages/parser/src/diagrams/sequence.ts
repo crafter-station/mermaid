@@ -6,6 +6,7 @@ import type {
 	SequenceMessage,
 	SequenceNote,
 	SequenceParticipant,
+	SourceSpan,
 } from "../types";
 import {
 	createError,
@@ -43,6 +44,9 @@ export function parseSequence(source: string): ParseResult<SequenceAST> {
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
+		if (line === undefined) {
+			continue;
+		}
 		const trimmed = line.trim();
 
 		if (!trimmed || trimmed.startsWith("%%")) {
@@ -87,7 +91,7 @@ export function parseSequence(source: string): ParseResult<SequenceAST> {
 	if (state.blockStack.length > 0) {
 		state.diagnostics.push(
 			createWarning(
-				`Unclosed block: ${state.blockStack[state.blockStack.length - 1].block.type}`,
+				`Unclosed block: ${state.blockStack[state.blockStack.length - 1]!.block.type}`,
 				createSpan(1, 1, 0, 0),
 			),
 		);
@@ -121,7 +125,9 @@ function parseParticipant(
 		return;
 	}
 
-	const [, type, id, label] = match;
+	const type = match[1]!;
+	const id = match[2]!;
+	const label = match[3];
 	const participant: SequenceParticipant = {
 		id,
 		label: label || id,
@@ -145,8 +151,8 @@ function parseMessage(line: string, span: SourceSpan, state: ParserState): void 
 				return;
 			}
 
-			let from = parts[0].trim();
-			const rightPart = parts[1].trim();
+			let from = parts[0]!.trim();
+			const rightPart = parts[1]!.trim();
 
 			let to: string;
 			let label: string;
@@ -155,7 +161,7 @@ function parseMessage(line: string, span: SourceSpan, state: ParserState): void 
 
 			if (rightPart.includes(":")) {
 				const [toRaw, ...labelParts] = rightPart.split(":");
-				to = toRaw.trim();
+				to = toRaw!.trim();
 				label = labelParts.join(":").trim();
 			} else {
 				to = rightPart;
@@ -185,7 +191,7 @@ function parseMessage(line: string, span: SourceSpan, state: ParserState): void 
 			};
 
 			if (state.blockStack.length > 0) {
-				state.blockStack[state.blockStack.length - 1].currentSection.messages.push(
+				state.blockStack[state.blockStack.length - 1]!.currentSection.messages.push(
 					message,
 				);
 			} else {
@@ -206,7 +212,8 @@ function parseMessage(line: string, span: SourceSpan, state: ParserState): void 
 function parseNote(line: string, span: SourceSpan, state: ParserState): void {
 	const leftMatch = line.match(/^Note\s+left\s+of\s+(\w+):\s*(.+)$/);
 	if (leftMatch) {
-		const [, participant, text] = leftMatch;
+		const participant = leftMatch[1]!;
+		const text = leftMatch[2]!;
 		ensureParticipant(participant, span, state);
 		const note: SequenceNote = {
 			placement: "left",
@@ -220,7 +227,8 @@ function parseNote(line: string, span: SourceSpan, state: ParserState): void {
 
 	const rightMatch = line.match(/^Note\s+right\s+of\s+(\w+):\s*(.+)$/);
 	if (rightMatch) {
-		const [, participant, text] = rightMatch;
+		const participant = rightMatch[1]!;
+		const text = rightMatch[2]!;
 		ensureParticipant(participant, span, state);
 		const note: SequenceNote = {
 			placement: "right",
@@ -234,7 +242,8 @@ function parseNote(line: string, span: SourceSpan, state: ParserState): void {
 
 	const overMatch = line.match(/^Note\s+over\s+([\w,\s]+):\s*(.+)$/);
 	if (overMatch) {
-		const [, participantsStr, text] = overMatch;
+		const participantsStr = overMatch[1]!;
+		const text = overMatch[2]!;
 		const participants = participantsStr.split(",").map((p) => p.trim());
 		for (const p of participants) {
 			ensureParticipant(p, span, state);
@@ -267,7 +276,7 @@ function parseBlockStart(
 
 	const [, type, label] = match;
 	const block: SequenceBlock = {
-		type: type as SequenceBlock["type"],
+		type: type! as SequenceBlock["type"],
 		label: label || "",
 		sections: [],
 		span,
@@ -299,7 +308,7 @@ function parseBlockSection(
 
 	const [, , label] = match;
 	const currentSection = { label, messages: [] };
-	const context = state.blockStack[state.blockStack.length - 1];
+	const context = state.blockStack[state.blockStack.length - 1]!;
 	context.block.sections.push(currentSection);
 	context.currentSection = currentSection;
 }
@@ -313,7 +322,7 @@ function parseBlockEnd(span: SourceSpan, state: ParserState): void {
 	const { block } = state.blockStack.pop()!;
 
 	if (state.blockStack.length > 0) {
-		state.blockStack[state.blockStack.length - 1].currentSection.messages.push(
+		state.blockStack[state.blockStack.length - 1]!.currentSection.messages.push(
 			block as any,
 		);
 	} else {
@@ -333,7 +342,7 @@ function parseActivation(
 	}
 
 	const [, action, participant] = match;
-	ensureParticipant(participant, span, state);
+	ensureParticipant(participant!, span, state);
 
 	state.diagnostics.push(
 		createWarning(
@@ -363,7 +372,7 @@ function addToCurrentScope(
 	state: ParserState,
 ): void {
 	if (state.blockStack.length > 0) {
-		state.blockStack[state.blockStack.length - 1].currentSection.messages.push(
+		state.blockStack[state.blockStack.length - 1]!.currentSection.messages.push(
 			item as any,
 		);
 	} else {

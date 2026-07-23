@@ -33,7 +33,7 @@ export function removeCycles<N, E>(
 	if (sources.length === 0) {
 		const allNodes = graph.nodeIds();
 		if (allNodes.length > 0) {
-			dfs(allNodes[0]);
+			dfs(allNodes[0]!);
 		}
 	} else {
 		for (const source of sources) {

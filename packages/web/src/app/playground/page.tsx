@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
-import { useQueryState, parseAsString } from "nuqs";
+import { useQueryState, parseAsString, parseAsStringLiteral } from "nuqs";
 import Script from "next/script";
 import { useDiagramTheme, THEME_NAMES, type ThemeName } from "@/components/theme-context";
 import { ChatPanel, type ChatPanelRef } from "@/components/chat/chat-panel";
@@ -662,7 +662,7 @@ function PlaygroundContent() {
 	const svgRef = useRef<HTMLDivElement>(null);
 	const domSvgRef = useRef<SVGSVGElement | null>(null);
 
-	const [outputTab, setOutputTab] = useQueryState("output", parseAsString.withDefault("svg") as ReturnType<typeof parseAsString.withDefault<OutputTab>>);
+	const [outputTab, setOutputTab] = useQueryState("output", parseAsStringLiteral(["svg", "ascii", "code"] as const).withDefault("svg"));
 	const [asciiHtml, setAsciiHtml] = useState("");
 	const [svgCode, setSvgCode] = useState("");
 
@@ -671,7 +671,7 @@ function PlaygroundContent() {
 	const [currentStep, setCurrentStep] = useState(-1);
 	const [playing, setPlaying] = useState(false);
 	const [speedIndex, setSpeedIndex] = useState(1);
-	const speedRef = useRef(SPEED_PRESETS[1]!.value);
+	const speedRef = useRef<number>(SPEED_PRESETS[1]!.value);
 	const animControlRef = useRef<{ cancel: boolean }>({ cancel: false });
 
 	const [showChat, setShowChat] = useState(false);

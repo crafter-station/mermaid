@@ -46,7 +46,7 @@ export function createSpanFromMatch(
 	const length = match[0].length;
 	const lines = input.slice(0, offset).split("\n");
 	const line = lines.length;
-	const column = lines[lines.length - 1].length + 1;
+	const column = lines[lines.length - 1]!.length + 1;
 
 	return createSpan(line, column, offset, length);
 }
