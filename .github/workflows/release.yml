@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/parser/package.json"
+      - "packages/layout/package.json"
+      - "packages/themes/package.json"
+      - "packages/cli/package.json"
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Update npm for trusted publishing
+        run: npm install -g npm@latest
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Build
+        run: bun run build
+
+      - name: Publish changed packages
+        id: publish
+        run: |
+          RELEASED=""
+          for dir in packages/parser packages/layout packages/themes packages/cli; do
+            NAME=$(jq -r .name "$dir/package.json")
+            LOCAL=$(jq -r .version "$dir/package.json")
+            PUBLISHED=$(npm view "$NAME" version 2>/dev/null || echo "0.0.0")
+            if [ "$LOCAL" != "$PUBLISHED" ]; then
+              echo "Publishing $NAME@$LOCAL (was $PUBLISHED)"
+              (cd "$dir" && npm publish --access public)
+              RELEASED="$RELEASED $NAME@$LOCAL"
+            else
+              echo "$NAME unchanged ($LOCAL)"
+            fi
+          done
+          echo "released=${RELEASED# }" >> "$GITHUB_OUTPUT"
+
+      - name: Changelog since last tag
+        if: steps.publish.outputs.released != ''
+        id: changelog
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          RANGE=${LAST_TAG:+$LAST_TAG..HEAD}
+          {
+            echo "body<<CHANGELOG_EOF"
+            echo "Published: ${{ steps.publish.outputs.released }}"
+            echo ""
+            git log $RANGE --pretty="- %s (%h)" --no-merges | grep -E "^- (feat|fix|perf|refactor|docs|chore)" || git log $RANGE --pretty="- %s (%h)" --no-merges | head -20
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: GitHub Release
+        if: steps.publish.outputs.released != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CLI_VERSION=$(jq -r .version packages/cli/package.json)
+          gh release create "v$CLI_VERSION-$(date +%Y%m%d%H%M)" \
+            --title "release $(date +%Y-%m-%d): ${{ steps.publish.outputs.released }}" \
+            --notes "${{ steps.changelog.outputs.body }}"
