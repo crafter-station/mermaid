@@ -21,5 +21,10 @@
     "build": "tsup",
     "test": "bun test src/",
     "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/crafter-station/mermaid.git",
+    "directory": "packages/layout"
   }
 }
