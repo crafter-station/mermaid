@@ -41,11 +41,15 @@ jobs:
       - name: Install
         run: bun install --frozen-lockfile
 
-      - name: Typecheck
-        run: bun run typecheck
-
       - name: Build
         run: bun run build
+
+      - name: Typecheck published packages
+        run: |
+          for dir in packages/parser packages/layout packages/themes packages/cli; do
+            echo "typecheck $dir"
+            (cd "$dir" && bunx tsc --noEmit)
+          done
 
       - name: Publish changed packages
         id: publish
